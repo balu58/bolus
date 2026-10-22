@@ -1,0 +1,19 @@
+# Datensicherungen der App – enthalten Gesundheitsdaten, niemals hochladen!
+bolusrechner-*.json
+*.backup.json
+
+# Visual Studio / VS Code
+.vs/
+*.suo
+*.user
+.vscode/*
+!.vscode/launch.json
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archive und Exporte
+*.zip
+*.xlsx
