@@ -5,6 +5,14 @@ Persönlicher Bolusrechner für Fiasp als Web-App für das iPhone. Läuft nach d
 > **Hinweis:** Eigenes Hilfsmittel für den privaten Gebrauch, **kein zugelassenes Medizinprodukt**.
 > Alle Vorschläge vor der Anwendung prüfen und mit der eigenen Therapie bzw. dem Diabetes-Team abgleichen.
 
+## Screenshots
+
+| Rechner | Essen | Verlauf | Einstellungen |
+|:---:|:---:|:---:|:---:|
+| <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Injektionen der letzten 3 Tage"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Profile und Einstellungen"> |
+
+*Beispieldaten: 7,5 IE Fiasp um 11:02, Abfrage um 12:40, BZ 172, KE als Formel `4,2*0,88`.*
+
 ## Funktionen
 
 - **Bolusvorschlag** aus BZ, KE und Profil (BZ-Ziel, Korrekturfaktor, KE-Faktor)
@@ -27,6 +35,7 @@ Persönlicher Bolusrechner für Fiasp als Web-App für das iPhone. Läuft nach d
 | `sw.js` | Service Worker für den Offline-Betrieb |
 | `manifest.webmanifest` | Name und Symbol für den Home-Bildschirm |
 | `icon-*.png` | App-Symbole |
+| `screenshots/` | Bilder für diese README (werden von der App nicht benötigt) |
 
 ## Veröffentlichen mit GitHub Pages
 
