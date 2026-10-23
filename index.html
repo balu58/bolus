@@ -63,6 +63,13 @@ p{margin:0 0 8px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .kebtns{display:flex;gap:6px;margin-top:6px}
 .kebtns button{font:inherit;font-size:1rem;flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;min-height:38px}
+.kerow{grid-column:1/-1;margin-top:-6px}
+.kerow .kebtns{margin-top:0}
+.kebtns button{min-height:42px;font-size:1.1rem}
+.foodpick{font:inherit;font-size:.92rem;width:100%;margin-top:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;min-height:38px}
+.picklist{max-height:50vh;overflow-y:auto;margin-top:8px}
+.picklist li{cursor:pointer}
+.calcitems{font-size:.8rem;color:var(--muted);margin-top:2px}
 .exprhint{font-size:.82rem;color:var(--muted);min-height:1.2em;margin-top:2px}
 .suggest button{white-space:nowrap;flex:0 0 auto}
 .suggest.full{background:var(--bg);border:1px dashed var(--line);margin-top:8px}
@@ -175,8 +182,11 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <div class="fields">
         <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"></div>
         <div><label for="ke">KE</label><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
-          <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button" data-ins="+" aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button></div>
           <div class="exprhint" id="keHint"></div></div>
+        <div class="kerow">
+          <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button" data-ins="+" aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button><button type="button" data-ins="/" aria-label="geteilt">÷</button><button type="button" data-ins="(" aria-label="Klammer auf">(</button><button type="button" data-ins=")" aria-label="Klammer zu">)</button></div>
+          <button type="button" class="foodpick" id="kePick">Aus Lebensmitteln</button>
+          <div class="calcitems" id="keItems"></div></div>
         <div class="pctfield"><label for="pct">Auf-/Abschlag (%)</label>
           <div class="pctctl"><button type="button" class="step" id="pctMinus" aria-label="5 Prozent weniger">−</button><input id="pct" inputmode="text" autocomplete="off"><button type="button" class="step" id="pctPlus" aria-label="5 Prozent mehr">+</button></div>
         </div>
@@ -312,7 +322,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER erhöhen =====
-var APP_VERSION = "6";
+var APP_VERSION = "8";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -545,6 +555,8 @@ function calc(){
   var ke = evalExpr(keRaw);
   var h = document.getElementById("keHint");
   h.textContent = (keRaw.trim() && isExpr(keRaw)) ? (isFinite(ke) ? "= "+fmt(ke,2)+" KE" : "Formel nicht lesbar") : "";
+  if(!keRaw.trim()) ui.calcItems = [];
+  var ci = document.getElementById("keItems"); if(ci) ci.textContent = (ui.calcItems&&ui.calcItems.length) ? ui.calcItems.join(" · ") : "";
   if(!isFinite(ke)) ke = 0;
   if(!ui.injKeDirty) document.getElementById("injKe").value = keRaw.trim() ? (isFinite(evalExpr(keRaw)) ? fmt(ke,1) : "") : "";
   if(!ui.injBzDirty) document.getElementById("injBz").value = isFinite(bz) ? fmt(bz,0) : "";
@@ -783,7 +795,7 @@ function field(d, id, label, value, mode, type){
   var i = el("input",{id:id,autocomplete:"off"}); if(mode) i.setAttribute("inputmode",mode); if(type) i.type=type; if(value!==undefined) i.value=value;
   w.appendChild(i); d.appendChild(w); return i;
 }
-function amountDlg(f){
+function amountDlg(f, onAdd){
   openDlg(function(d){
     d.appendChild(el("h2",{style:"margin-top:0"}, f.name));
     var isG = f.unit==="100g";
@@ -794,11 +806,50 @@ function amountDlg(f){
     amt.addEventListener("input", upd); upd();
     d.appendChild(actions("Hinzufügen", function(){
       var ke = upd(); if(!isFinite(ke) || ke<0){ toast("Bitte eine Menge eingeben"); return; }
-      ui.basket.push({label: f.name+" ("+amt.value+(isG?" g":" × "+f.unit)+")", ke:ke});
-      closeDlg(); renderBasket(); toast(fmt(ke,2)+" KE hinzugefügt");
+      var label = f.name+" ("+amt.value+(isG?" g":" × "+f.unit)+")";
+      markRecent(f.id);
+      closeDlg();
+      if(onAdd){ onAdd(ke, label); return; }
+      ui.basket.push({label: label, ke:ke});
+      renderBasket(); toast(fmt(ke,2)+" KE hinzugefügt");
     }));
     setTimeout(function(){ amt.focus(); }, 50);
   });
+}
+var RECENT_KEY = "bolusrechner-foodrecent";
+function recentMap(){ try{ return JSON.parse(localStorage.getItem(RECENT_KEY)||"{}"); }catch(e){ return {}; } }
+function markRecent(id){ try{ var m = recentMap(); m[id] = Date.now(); localStorage.setItem(RECENT_KEY, JSON.stringify(m)); }catch(e){} }
+function pickFoodDlg(){
+  openDlg(function(d){
+    d.appendChild(el("h2",{style:"margin-top:0"},"Lebensmittel wählen"));
+    var q = el("input",{type:"search",placeholder:"Suchen …",autocomplete:"off","aria-label":"Lebensmittel suchen"}); d.appendChild(q);
+    var ul = el("ul",{class:"list picklist"}); d.appendChild(ul);
+    function draw(){
+      var rec = recentMap(), term = q.value.trim().toLowerCase();
+      var list = state.foods.filter(function(f){ return !term || f.name.toLowerCase().indexOf(term)>=0; })
+        .sort(function(a,b){ var ra=rec[a.id]||0, rb=rec[b.id]||0; if(ra!==rb) return rb-ra; return a.name.localeCompare(b.name,"de"); });
+      ul.innerHTML="";
+      if(!list.length){ ul.appendChild(el("li",{class:"muted"},"Nichts gefunden. Neue Lebensmittel legst du im Tab „Essen“ an.")); return; }
+      list.forEach(function(f){
+        var li = el("li",{role:"button",tabindex:"0"}); var m = el("div",{class:"li-main"});
+        var t = el("div",{class:"li-title"}, f.name); if(f.check) t.appendChild(el("span",{class:"badge"},"bitte prüfen"));
+        m.appendChild(t); m.appendChild(el("div",{class:"small muted num"}, fmt(f.ke,2)+" KE je "+unitLabel(f.unit)+(rec[f.id]?" · zuletzt verwendet":"")));
+        li.appendChild(m);
+        function go(){ amountDlg(f, addToKe); }
+        li.addEventListener("click", go); li.addEventListener("keydown", function(e){ if(e.key==="Enter") go(); });
+        ul.appendChild(li);
+      });
+    }
+    q.addEventListener("input", draw); draw();
+    var a = el("div",{class:"dlg-actions"}); var c = el("button",{class:"secondary",type:"button"},"Abbrechen"); c.addEventListener("click", closeDlg); a.appendChild(c); d.appendChild(a);
+  });
+}
+function addToKe(ke, label){
+  var i = document.getElementById("ke");
+  var v = fmt(Math.round(ke*100)/100, 2).replace(/,?0+$/,"");
+  i.value = i.value.trim() ? i.value.trim()+"+"+v : v;
+  ui.calcItems = (ui.calcItems||[]).concat([label]);
+  renderCalc(); toast(fmt(ke,2)+" KE übernommen");
 }
 function foodDlg(f){
   var isNew = !f;
@@ -1023,6 +1074,7 @@ window.addEventListener("online", function(){ ghSync(); });
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
 document.getElementById("bz").addEventListener("input", renderCalc);
 document.getElementById("ke").addEventListener("input", renderCalc);
+document.getElementById("kePick").addEventListener("click", pickFoodDlg);
 document.getElementById("injKe").addEventListener("input", function(e){ ui.injKeDirty = e.target.value.trim()!==""; });
 document.getElementById("injBz").addEventListener("input", function(e){ ui.injBzDirty = e.target.value.trim()!==""; });
 document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListener("mousedown", function(e){ e.preventDefault(); }); b.addEventListener("click", function(){
