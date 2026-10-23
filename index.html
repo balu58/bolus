@@ -64,6 +64,7 @@ p{margin:0 0 8px}
 .kebtns{display:flex;gap:6px;margin-top:6px}
 .kebtns button{font:inherit;font-size:1rem;flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;min-height:38px}
 .kerow{grid-column:1/-1;margin-top:-6px}
+input.missing{border-color:var(--red);background:var(--red-soft)}
 .kerow .kebtns{margin-top:0}
 .kebtns button{min-height:42px;font-size:1.1rem}
 .foodpick{font:inherit;font-size:.92rem;width:100%;margin-top:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;min-height:38px}
@@ -200,7 +201,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><label for="injU">Gespritzt (IE)</label><input id="injU" inputmode="decimal" autocomplete="off"></div>
         <div><label for="injT">Uhrzeit</label><input id="injT" type="time"></div>
         <div><label for="injKe">Gegessen (KE)</label><input id="injKe" inputmode="decimal" autocomplete="off" placeholder="0"></div>
-        <div><label for="injBz">BZ (mg/dl)</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="–"></div>
+        <div><label for="injBz">BZ (mg/dl) *</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="Pflichtfeld" required></div>
         <button class="primary" id="injSave">Speichern</button>
       </div>
       <p class="note">Liegt die Uhrzeit mehr als 5 Minuten in der Zukunft, wird sie als gestern gespeichert (z. B. 23:50 um 0:30).</p>
@@ -322,7 +323,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER erhöhen =====
-var APP_VERSION = "8";
+var APP_VERSION = "9";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -560,6 +561,7 @@ function calc(){
   if(!isFinite(ke)) ke = 0;
   if(!ui.injKeDirty) document.getElementById("injKe").value = keRaw.trim() ? (isFinite(evalExpr(keRaw)) ? fmt(ke,1) : "") : "";
   if(!ui.injBzDirty) document.getElementById("injBz").value = isFinite(bz) ? fmt(bz,0) : "";
+  if(document.getElementById("injBz").value.trim()) document.getElementById("injBz").classList.remove("missing");
   var iob = iobAt(Date.now());
   var meal = ke * s.ke;
   var corr = isFinite(bz) ? (bz - s.ziel)/s.korr : 0;
@@ -1076,7 +1078,7 @@ document.getElementById("bz").addEventListener("input", renderCalc);
 document.getElementById("ke").addEventListener("input", renderCalc);
 document.getElementById("kePick").addEventListener("click", pickFoodDlg);
 document.getElementById("injKe").addEventListener("input", function(e){ ui.injKeDirty = e.target.value.trim()!==""; });
-document.getElementById("injBz").addEventListener("input", function(e){ ui.injBzDirty = e.target.value.trim()!==""; });
+document.getElementById("injBz").addEventListener("input", function(e){ ui.injBzDirty = e.target.value.trim()!==""; e.target.classList.remove("missing"); });
 document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListener("mousedown", function(e){ e.preventDefault(); }); b.addEventListener("click", function(){
   var i = document.getElementById("ke"); var a = i.selectionStart!=null ? i.selectionStart : i.value.length, z = i.selectionEnd!=null ? i.selectionEnd : i.value.length;
   i.value = i.value.slice(0,a) + b.dataset.ins + i.value.slice(z); i.focus(); try{ i.setSelectionRange(a+1,a+1); }catch(e){} renderCalc();
@@ -1087,6 +1089,7 @@ document.getElementById("injSave").addEventListener("click", function(){
   var bzIn = evalExpr(document.getElementById("injBz").value); if(!isFinite(bzIn) || bzIn<=0) bzIn = 0;
   if(!isFinite(u) || u<0) u = 0;
   if(u<=0 && keEat<=0){ toast("Bitte gespritzte IE oder gegessene KE eingeben"); return; }
+  if(!(bzIn>0)){ toast("Bitte den BZ eingeben"); var bzf=document.getElementById("injBz"); bzf.classList.add("missing"); bzf.focus(); return; }
   var tv = document.getElementById("injT").value || hhmm(new Date());
   var now = new Date(); var d = new Date(now); var p = tv.split(":"); d.setHours(+p[0], +p[1], 0, 0);
   if(d.getTime() > now.getTime()+5*60000) d = new Date(d.getTime()-86400000);
