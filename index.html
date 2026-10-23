@@ -114,6 +114,8 @@ button.ghost{background:transparent;border:0;color:var(--accent);padding:8px 6px
 button.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
 .inj-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 .inj-form button{grid-column:1/-1}
+.inj-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.inj-actions button{grid-column:auto}
 
 /* lists */
 ul.list{list-style:none;margin:0;padding:0}
@@ -202,7 +204,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><label for="injT">Uhrzeit</label><input id="injT" type="time"></div>
         <div><label for="injKe">Gegessen (KE)</label><input id="injKe" inputmode="decimal" autocomplete="off" placeholder="0"></div>
         <div><label for="injBz">BZ (mg/dl) *</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="Pflichtfeld" required></div>
-        <button class="primary" id="injSave">Speichern</button>
+        <div class="inj-actions"><button class="secondary" id="injCancel" type="button">Abbrechen</button><button class="primary" id="injSave">Speichern</button></div>
       </div>
       <p class="note">Liegt die Uhrzeit mehr als 5 Minuten in der Zukunft, wird sie als gestern gespeichert (z. B. 23:50 um 0:30).</p>
     </div>
@@ -323,7 +325,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER erhöhen =====
-var APP_VERSION = "9";
+var APP_VERSION = "10";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1083,6 +1085,17 @@ document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListe
   var i = document.getElementById("ke"); var a = i.selectionStart!=null ? i.selectionStart : i.value.length, z = i.selectionEnd!=null ? i.selectionEnd : i.value.length;
   i.value = i.value.slice(0,a) + b.dataset.ins + i.value.slice(z); i.focus(); try{ i.setSelectionRange(a+1,a+1); }catch(e){} renderCalc();
 }); });
+function resetEntry(){
+  ["bz","ke","injU","injKe","injBz"].forEach(function(id){ var i=document.getElementById(id); i.value=""; i.classList.remove("missing"); });
+  document.getElementById("keHint").textContent=""; ui.calcItems=[];
+  ui.injKeDirty=false; ui.injBzDirty=false; ui.slotManual=false;
+  nowForInput(); renderSlots(); renderCalc();
+}
+document.getElementById("injCancel").addEventListener("click", function(){
+  var any = ["bz","ke","injU","injKe","injBz"].some(function(id){ return document.getElementById(id).value.trim(); });
+  if(!any){ resetEntry(); return; }
+  confirmDlg("Eingaben verwerfen?", "BZ, KE und gespritzte IE werden geleert. Gespeicherte Einträge bleiben erhalten.", "Verwerfen", function(){ resetEntry(); toast("Eingaben verworfen"); });
+});
 document.getElementById("injSave").addEventListener("click", function(){
   var u = evalExpr(document.getElementById("injU").value);
   var keEat = evalExpr(document.getElementById("injKe").value); if(!isFinite(keEat) || keEat<0) keEat = 0;
