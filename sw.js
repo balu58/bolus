@@ -1,6 +1,8 @@
 // Offline-Speicher für den Bolusrechner.
-// Bei einer neuen Version die Zahl erhöhen, damit das iPhone die neue Fassung lädt.
-const CACHE = "bolusrechner-v4";
+// Die Versionsnummer kommt aus index.html (APP_VERSION) über "sw.js?v=...".
+// Hier muss bei einer neuen Version nichts geändert werden.
+const VERSION = new URL(self.location.href).searchParams.get("v") || "0";
+const CACHE = "bolusrechner-v" + VERSION;
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png?v=4", "./icon-192.png?v=4", "./icon-512.png?v=4"];
 
 self.addEventListener("install", e => {

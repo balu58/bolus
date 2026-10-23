@@ -146,9 +146,10 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 </head>
 <body>
 <main>
-  <header style="display:flex;justify-content:space-between;align-items:center;margin:4px 2px 12px">
+  <header style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:4px 2px 12px">
     <h1>Bolusrechner</h1>
-    <span class="sync" id="sync">nur auf diesem Gerät</span>
+    <span class="sync" id="appVersion" style="text-align:center"></span>
+    <span class="sync" id="sync" style="text-align:right">nur auf diesem Gerät</span>
   </header>
 
   <section class="iob" aria-label="Aktives Insulin">
@@ -184,11 +185,13 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     </div>
 
     <div class="block">
-      <h2 style="margin-top:0">Injektion speichern</h2>
+      <h2 style="margin-top:0">Injektion und Mahlzeit speichern</h2>
       <div class="inj-form">
         <div><label for="injU">Gespritzt (IE)</label><input id="injU" inputmode="decimal" autocomplete="off"></div>
         <div><label for="injT">Uhrzeit</label><input id="injT" type="time"></div>
-        <button class="primary" id="injSave">Injektion speichern</button>
+        <div><label for="injKe">Gegessen (KE)</label><input id="injKe" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+        <div><label for="injBz">BZ (mg/dl)</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="–"></div>
+        <button class="primary" id="injSave">Speichern</button>
       </div>
       <p class="note">Liegt die Uhrzeit mehr als 5 Minuten in der Zukunft, wird sie als gestern gespeichert (z. B. 23:50 um 0:30).</p>
     </div>
@@ -296,6 +299,8 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 <script>
 (function(){
 "use strict";
+// ===== Versionsnummer: bei jeder neuen Version NUR HIER erhöhen =====
+var APP_VERSION = "5";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -527,6 +532,8 @@ function calc(){
   var h = document.getElementById("keHint");
   h.textContent = (keRaw.trim() && isExpr(keRaw)) ? (isFinite(ke) ? "= "+fmt(ke,2)+" KE" : "Formel nicht lesbar") : "";
   if(!isFinite(ke)) ke = 0;
+  if(!ui.injKeDirty) document.getElementById("injKe").value = keRaw.trim() ? (isFinite(evalExpr(keRaw)) ? fmt(ke,1) : "") : "";
+  if(!ui.injBzDirty) document.getElementById("injBz").value = isFinite(bz) ? fmt(bz,0) : "";
   var iob = iobAt(Date.now());
   var meal = ke * s.ke;
   var corr = isFinite(bz) ? (bz - s.ziel)/s.korr : 0;
@@ -572,7 +579,7 @@ function injItem(x, withDate){
   var today = new Date(); var isToday = d.toDateString()===today.toDateString();
   var y = new Date(today.getTime()-86400000);
   var day = isToday ? "heute" : (d.toDateString()===y.toDateString() ? "gestern" : d.toLocaleDateString("de-DE",{weekday:"short",day:"numeric",month:"numeric"}));
-  m.appendChild(el("div",{class:"li-title num"}, fmt(x.u)+" IE · "+hhmm(d)));
+  m.appendChild(el("div",{class:"li-title num"}, (x.u>0?fmt(x.u)+" IE · ":"")+hhmm(d)+(x.ke>0?" · "+fmt(x.ke)+" KE":"")+(x.u>0?"":" · ohne Insulin")+(x.bz>0?" · BZ "+fmt(x.bz,0):"")));
   var act = x.u*activeFrac()((Date.now()-x.t)/60000);
   m.appendChild(el("div",{class:"small muted"}, day+(x.slot?", "+x.slot:"")+(act>0.005?", noch "+fmt(act)+" IE aktiv":"")));
   var del = el("button",{class:"ghost",type:"button","aria-label":"Injektion löschen"},"Löschen");
@@ -884,25 +891,34 @@ function importData(){
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
 document.getElementById("bz").addEventListener("input", renderCalc);
 document.getElementById("ke").addEventListener("input", renderCalc);
+document.getElementById("injKe").addEventListener("input", function(e){ ui.injKeDirty = e.target.value.trim()!==""; });
+document.getElementById("injBz").addEventListener("input", function(e){ ui.injBzDirty = e.target.value.trim()!==""; });
 document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListener("mousedown", function(e){ e.preventDefault(); }); b.addEventListener("click", function(){
   var i = document.getElementById("ke"); var a = i.selectionStart!=null ? i.selectionStart : i.value.length, z = i.selectionEnd!=null ? i.selectionEnd : i.value.length;
   i.value = i.value.slice(0,a) + b.dataset.ins + i.value.slice(z); i.focus(); try{ i.setSelectionRange(a+1,a+1); }catch(e){} renderCalc();
 }); });
 document.getElementById("injSave").addEventListener("click", function(){
   var u = evalExpr(document.getElementById("injU").value);
-  if(!isFinite(u) || u<=0){ toast("Bitte die gespritzten IE eingeben"); return; }
+  var keEat = evalExpr(document.getElementById("injKe").value); if(!isFinite(keEat) || keEat<0) keEat = 0;
+  var bzIn = evalExpr(document.getElementById("injBz").value); if(!isFinite(bzIn) || bzIn<=0) bzIn = 0;
+  if(!isFinite(u) || u<0) u = 0;
+  if(u<=0 && keEat<=0){ toast("Bitte gespritzte IE oder gegessene KE eingeben"); return; }
   var tv = document.getElementById("injT").value || hhmm(new Date());
   var now = new Date(); var d = new Date(now); var p = tv.split(":"); d.setHours(+p[0], +p[1], 0, 0);
   if(d.getTime() > now.getTime()+5*60000) d = new Date(d.getTime()-86400000);
-  state.injections.push({id:uidGen(), t:d.getTime(), u:u, slot: state.settings.slots[ui.slot] ? state.settings.slots[ui.slot].name : ""});
+  var rec = {id:uidGen(), t:d.getTime(), u:u, slot: state.settings.slots[ui.slot] ? state.settings.slots[ui.slot].name : ""};
+  if(keEat>0) rec.ke = Math.round(keEat*100)/100;
+  if(bzIn>0) rec.bz = Math.round(bzIn);
+  state.injections.push(rec);
   var cut = Date.now()-3*86400000;
   state.injections = state.injections.filter(function(x){return x.t>=cut;}).sort(function(a,b){return a.t-b.t;});
   persist("injections");
   document.getElementById("injU").value=""; nowForInput();
+  document.getElementById("injKe").value=""; document.getElementById("injBz").value=""; ui.injKeDirty=false; ui.injBzDirty=false;
   document.getElementById("bz").value=""; document.getElementById("ke").value=""; document.getElementById("keHint").textContent="";
   ui.basket=[]; renderBasket();
   ui.slotManual=false;
-  renderAll(); toast(fmt(u)+" IE um "+hhmm(d)+" gespeichert");
+  renderAll(); toast((u>0?fmt(u)+" IE":fmt(keEat)+" KE")+" um "+hhmm(d)+" gespeichert");
 });
 document.getElementById("foodSearch").addEventListener("input", renderFoods);
 document.getElementById("foodNew").addEventListener("click", function(){ foodDlg(null); });
@@ -962,13 +978,14 @@ document.querySelectorAll("nav button").forEach(function(b){ b.addEventListener(
 function renderAll(){ renderBackup(); renderIOB(); renderSlots(); renderCalc(); renderRecent(); renderLog(); renderFoods(); renderBasket(); renderSettings(); }
 
 // ---------- Start ----------
+document.getElementById("appVersion").textContent = "v" + APP_VERSION;
 loadLocal();
 ui.model = state.settings.model;
 nowForInput();
 renderRecipe();
 renderAll();
 connect();
-if("serviceWorker" in navigator && location.protocol==="https:" && window.top===window && !/claude\.ai$|claudeusercontent/.test(location.hostname)){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+if("serviceWorker" in navigator && location.protocol==="https:" && window.top===window && !/claude\.ai$|claudeusercontent/.test(location.hostname)){ navigator.serviceWorker.register("sw.js?v="+APP_VERSION).catch(function(){}); }
 setInterval(function(){ renderIOB(); renderRecent(); renderCalc(); if(!ui.slotManual) renderSlots(); }, 30000);
 document.addEventListener("visibilitychange", function(){ if(!document.hidden){ nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
 })();

@@ -48,8 +48,9 @@ Persönlicher Bolusrechner für Fiasp als Web-App für das iPhone. Läuft nach d
 ## Neue Version veröffentlichen
 
 1. Änderungen an `index.html` vornehmen.
-2. In `sw.js` die Versionsnummer erhöhen, z. B. `bolusrechner-v4` → `bolusrechner-v5`.
-   Sonst zeigt das iPhone weiter die alte, offline gespeicherte Fassung.
+2. In `index.html` die Versionsnummer erhöhen: `var APP_VERSION = "5";` → `"6"`.
+   Sie wird oben in der App angezeigt und sorgt dafür, dass das iPhone die neue Fassung lädt
+   (`sw.js` muss dafür nicht geändert werden).
 3. Commit und Push. GitHub Pages aktualisiert die Seite automatisch.
 
 ## Lokal testen
