@@ -25,7 +25,83 @@ Persönlicher Bolusrechner für Fiasp als Web-App für das iPhone. Läuft nach d
 - **Profile** frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
+- **Synchronisation** zwischen Geräten über ein privates GitHub-Repository
 - **Sicherung** aller Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
+
+## Synchronisation zwischen Geräten (GitHub)
+
+Die App kann ihre Daten automatisch über ein **zweites, privates** Repository abgleichen
+(z. B. iPhone 17 ↔ iPhone XR ↔ PC). Jedes Gerät behält eine lokale Kopie und funktioniert offline;
+Änderungen werden hochgeladen, sobald wieder Internet da ist.
+
+### Einmalig einrichten
+
+1. **Privates Daten-Repository anlegen:** GitHub → „+“ → *New repository*, Name z. B. `bolus-daten`,
+   Sichtbarkeit **Private**, Haken bei *Add a README file*.
+2. **Token erstellen** – siehe [Token generieren](#token-generieren) weiter unten.
+3. **In der App:** Einstellungen → *Synchronisation (GitHub)* → Repository `benutzername/bolus-daten`
+   und Token eintragen → **Verbinden**. Auf jedem Gerät wiederholen (gleicher oder eigener Token).
+
+### Token generieren
+
+Der Token ist der Zugangsschlüssel der App zum Daten-Repository. Er darf **nur dieses eine
+Repository** lesen und schreiben.
+
+1. Auf GitHub oben rechts auf das **Profilbild** → **Settings**.
+2. Links ganz unten **Developer settings** → **Personal access tokens** → **Fine-grained tokens**.
+3. **Generate new token** (ggf. Passwort bzw. Zwei-Faktor-Code bestätigen).
+4. Angaben ausfüllen:
+   - **Token name:** z. B. `Bolusrechner`
+   - **Description** (optional): z. B. `Sync iPhone 17, iPhone XR, PC`
+   - **Resource owner:** dein eigenes Konto
+   - **Expiration:** z. B. **366 days** (siehe [Ablaufdatum](#ablaufdatum-und-erneuerung))
+5. **Repository access:** **Only select repositories** wählen und im Auswahlfeld
+   **nur** `bolus-daten` auswählen.
+6. **Permissions** (Berechtigungen):
+   1. Unter *Repository permissions* auf **Add permissions** klicken.
+   2. In der Liste den Haken bei **Contents** setzen (oder „Contents“ ins Suchfeld tippen)
+      und die Liste mit einem Klick daneben schließen.
+   3. In der neuen Zeile **Contents** rechts das Auswahlfeld von *Read-only* auf
+      **Read and write** umstellen.
+   4. Die Zeile **Metadata: Read-only** erscheint automatisch und bleibt so.
+   5. Keine weiteren Berechtigungen hinzufügen.
+7. Unten **Generate token** → kontrollieren, dass in der Übersicht *Contents: Read and write*
+   und *Metadata: Read-only* für `bolus-daten` stehen → **Generate token** bestätigen.
+8. Den angezeigten Token (`github_pat_…`) **sofort kopieren** – er wird nur dieses eine Mal angezeigt.
+   Am besten direkt in die App eintragen; zum Aufbewahren nur in einem Passwort-Manager,
+   **nicht** in Notizen, Mails oder im Repository.
+
+> Ein Token kann auf mehreren Geräten verwendet werden. Wer es übersichtlicher mag,
+> erstellt pro Gerät einen eigenen Token (z. B. `Bolusrechner iPhone 17`, `… XR`) –
+> dann lässt sich bei Verlust gezielt nur einer löschen.
+
+### Ablaufdatum und Erneuerung
+
+- Ein Ablaufdatum begrenzt den Schaden, falls ein Token unbemerkt in falsche Hände gerät.
+  1 Jahr ist ein guter Kompromiss zwischen Sicherheit und Aufwand.
+- GitHub schickt einige Tage vor Ablauf eine **Erinnerungs-E-Mail**.
+- Nach Ablauf läuft die App normal weiter, nur der Abgleich stoppt
+  (Einstellungen: „Token ungültig oder abgelaufen“, oben: „Sync-Fehler“). Es gehen keine Daten verloren.
+- Erneuern: neuen Token wie oben erstellen (oder beim alten Token **Regenerate token**),
+  auf jedem Gerät in der App eintragen → **Verbinden**.
+
+### Token sperren (z. B. bei Verlust eines Geräts)
+
+Profilbild → Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+Token auswählen → **Delete**. Danach auf den übrigen Geräten ggf. einen neuen Token eintragen.
+
+### So wird abgeglichen
+
+- Beim Start, beim Zurückkehren in die App, nach jeder Änderung und alle 2 Minuten.
+- **Injektionen** werden zusammengeführt; gelöschte Einträge werden auf allen Geräten gelöscht.
+- **Einstellungen** und **Lebensmittel**: die zuletzt geänderte Fassung gewinnt.
+- Die Daten liegen als `bolus-daten.json` im Daten-Repository; jede Änderung ist ein Commit
+  (dadurch gibt es dort auch eine Versionsgeschichte).
+- Der Token bleibt nur auf dem Gerät und ist **nicht** in der JSON-Sicherung enthalten.
+- Bei Verlust eines Geräts: Token unter *Fine-grained tokens* löschen.
+
+> Das App-Repository bleibt öffentlich, das Daten-Repository muss **privat** sein.
+> Die App warnt, wenn das Daten-Repository öffentlich ist.
 
 ## Dateien
 
@@ -66,8 +142,9 @@ iPhone 17 = 402 × 874, iPhone XR = 414 × 896.
 
 ## Datenschutz
 
-Alle Daten (Einstellungen, Injektionen, Lebensmittel) bleiben **nur im Browser des Geräts**.
-Die App sendet nichts an einen Server. Sicherungsdateien (`bolusrechner-*.json`) gehören
+Alle Daten (Einstellungen, Injektionen, Lebensmittel) liegen im Browser des Geräts.
+Nur wenn die Synchronisation eingerichtet ist, werden sie zusätzlich in **dein privates
+Daten-Repository** auf GitHub geschrieben – sonst sendet die App nichts an einen Server. Sicherungsdateien (`bolusrechner-*.json`) gehören
 **nicht** ins Repository und sind deshalb in `.gitignore` ausgeschlossen.
 
 ## Lizenz

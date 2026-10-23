@@ -272,6 +272,18 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       </div>
       <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
     </div>
+    <div class="block" id="ghBlock">
+      <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
+      <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist nicht Teil der Sicherung.</p>
+      <div style="margin-top:10px"><label for="ghRepo">Repository (benutzername/name)</label><input id="ghRepo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="benutzername/bolus-daten" style="font-size:1rem"></div>
+      <div style="margin-top:10px"><label for="ghToken">Zugangs-Token</label><input id="ghToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" style="font-size:1rem"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="primary" id="ghSave" style="width:auto;flex:1">Verbinden</button>
+        <button class="secondary" id="ghNow">Jetzt synchronisieren</button>
+        <button class="ghost" id="ghOff">Trennen</button>
+      </div>
+      <p class="small" id="ghStatus" style="margin-top:10px"></p>
+    </div>
     <div class="block">
       <h2 style="margin-top:0">Sicherung</h2>
       <p class="muted small">„Jetzt sichern“ öffnet das Teilen-Menü. Dort OneDrive oder „In Dateien sichern“ wählen.</p>
@@ -300,7 +312,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER erhöhen =====
-var APP_VERSION = "5";
+var APP_VERSION = "6";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -336,7 +348,7 @@ var DEFAULT_FOODS = [
 
 // ---------- State ----------
 var LS_KEY = "bolusrechner-v1";
-var state = {settings:clone(DEFAULT_SETTINGS), injections:[], foods:clone(DEFAULT_FOODS)};
+var state = {settings:clone(DEFAULT_SETTINGS), injections:[], foods:clone(DEFAULT_FOODS), meta:{settingsAt:0, foodsAt:0}, deleted:{}};
 var ui = {model:null, slot:null, slotManual:false, basket:[], recipe:[{n:"",g:"",kh:""}], view:"calc"};
 var db = null, uid = null, downloads = null;
 
@@ -344,7 +356,7 @@ function clone(o){return JSON.parse(JSON.stringify(o));}
 function loadLocal(){
   try{
     var raw = localStorage.getItem(LS_KEY);
-    if(raw){ var d = JSON.parse(raw); if(d.settings) state.settings = fixSettings(d.settings); if(d.injections) state.injections = d.injections; if(d.foods) state.foods = d.foods; }
+    if(raw){ var d = JSON.parse(raw); if(d.settings) state.settings = fixSettings(d.settings); if(d.injections) state.injections = d.injections; if(d.foods) state.foods = d.foods; if(d.meta) state.meta = d.meta; if(d.deleted) state.deleted = d.deleted; }
   }catch(e){}
 }
 function fixSettings(x){
@@ -362,7 +374,9 @@ function saveLocal(){
 var pending = {}, writing = {};
 function docRef(name){ return db.collection("data/users/" + uid).doc(name); }
 function persist(name){
+  if(name==="settings" || name==="foods"){ state.meta = state.meta || {}; state.meta[name+"At"] = Date.now(); }
   saveLocal();
+  scheduleGhSync();
   if(!db || !uid) return;
   pending[name] = true;
   if(writing[name]) return;
@@ -586,6 +600,7 @@ function injItem(x, withDate){
   del.addEventListener("click", function(){
     confirmDlg("Injektion löschen?", fmt(x.u)+" IE um "+hhmm(d)+" ("+day+")", "Löschen", function(){
       state.injections = state.injections.filter(function(z){return z.id!==x.id;});
+      state.deleted = state.deleted || {}; state.deleted[x.id] = Date.now();
       persist("injections"); renderAll(); toast("Injektion gelöscht");
     });
   });
@@ -865,7 +880,8 @@ function applyImport(text){
   try{
     var o = JSON.parse(text); var x = o.data || o;
     if(!x.settings || !x.foods || !x.injections) throw 0;
-    state = {settings:fixSettings(x.settings), foods:x.foods, injections:x.injections};
+    var nowTs = Date.now();
+    state = {settings:fixSettings(x.settings), foods:x.foods, injections:x.injections, meta:{settingsAt:nowTs, foodsAt:nowTs}, deleted:x.deleted||{}};
     ["settings","foods","injections"].forEach(persist);
     closeDlg(); renderAll(); toast("Sicherung wiederhergestellt");
   }catch(e){ toast("Das ist keine gültige Sicherung"); }
@@ -886,6 +902,122 @@ function importData(){
     d.appendChild(actions("Wiederherstellen", function(){ applyImport(ta.value); }, true));
   });
 }
+
+// ---------- GitHub-Synchronisation ----------
+var GH_KEY = "bolusrechner-github";
+var gh = {repo:"", token:"", path:"bolus-daten.json", lastSync:0, lastError:"", warn:""};
+var ghBusy = false, ghAgain = false, ghTimer = null;
+var inFrame = (function(){ try{ return window.top!==window; }catch(e){ return true; } })();
+function loadGh(){ try{ var o = JSON.parse(localStorage.getItem(GH_KEY)||"null"); if(o) for(var k in o) gh[k]=o[k]; }catch(e){} }
+function saveGh(){ try{ localStorage.setItem(GH_KEY, JSON.stringify(gh)); }catch(e){} }
+function ghReady(){ return !inFrame && !!gh.repo && !!gh.token; }
+function b64e(str){ var bytes = new TextEncoder().encode(str), bin=""; for(var i=0;i<bytes.length;i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); return btoa(bin); }
+function b64d(b){ var bin = atob(String(b).replace(/\s/g,"")), bytes = new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
+function stable(o){ if(Array.isArray(o)) return "["+o.map(stable).join(",")+"]"; if(o && typeof o==="object") return "{"+Object.keys(o).sort().map(function(k){return JSON.stringify(k)+":"+stable(o[k]);}).join(",")+"}"; return JSON.stringify(o); }
+function snapshot(){ return {settings:state.settings, foods:state.foods, injections:state.injections, meta:state.meta||{settingsAt:0,foodsAt:0}, deleted:state.deleted||{}}; }
+function mergeData(L, Rm){
+  L = clone(L);
+  if(!Rm) return L;
+  Rm = clone(Rm);
+  var lm = L.meta||{}, rm = Rm.meta||{};
+  var out = {meta:{}};
+  if((rm.settingsAt||0) > (lm.settingsAt||0) && Rm.settings){ out.settings = fixSettings(Rm.settings); out.meta.settingsAt = rm.settingsAt; } else { out.settings = L.settings; out.meta.settingsAt = lm.settingsAt||0; }
+  if((rm.foodsAt||0) > (lm.foodsAt||0) && Rm.foods){ out.foods = Rm.foods; out.meta.foodsAt = rm.foodsAt; } else { out.foods = L.foods; out.meta.foodsAt = lm.foodsAt||0; }
+  var del = {}, cut = Date.now()-7*86400000;
+  [L.deleted||{}, Rm.deleted||{}].forEach(function(d){ for(var k in d){ if(d[k]>=cut && (!del[k] || d[k]>del[k])) del[k]=d[k]; } });
+  out.deleted = del;
+  var map = {}, icut = Date.now()-3*86400000;
+  (Rm.injections||[]).concat(L.injections||[]).forEach(function(x){ if(x && x.id && !del[x.id] && x.t>=icut) map[x.id]=x; });
+  out.injections = Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return a.t-b.t;});
+  return {settings:out.settings, foods:out.foods, injections:out.injections, meta:out.meta, deleted:out.deleted};
+}
+function ghUrl(){ return "https://api.github.com/repos/"+gh.repo.trim().replace(/^\/+|\/+$/g,"")+"/contents/"+encodeURIComponent(gh.path); }
+function ghHeaders(){ return {"Accept":"application/vnd.github+json","Authorization":"Bearer "+gh.token.trim(),"X-GitHub-Api-Version":"2022-11-28"}; }
+function ghErrText(st){ return st===401 ? "Token ungültig oder abgelaufen" : st===403 ? "Token hat keine Berechtigung (Contents: Read and write)" : st===404 ? "Repository nicht gefunden oder Token hat keinen Zugriff darauf" : "Fehler "+st; }
+function scheduleGhSync(){ if(!ghReady()) return; clearTimeout(ghTimer); ghTimer = setTimeout(ghSync, 2500); }
+async function ghSync(){
+  if(!ghReady()) return;
+  if(!navigator.onLine){ renderSyncStatus("offline"); return; }
+  if(ghBusy){ ghAgain = true; return; }
+  ghBusy = true; renderSyncStatus("busy");
+  try{
+    for(var attempt=0; attempt<3; attempt++){
+      var res = await fetch(ghUrl(), {headers:ghHeaders(), cache:"no-store"});
+      var remote = null, sha = null;
+      if(res.status===404){ remote = null; }
+      else if(!res.ok){ throw new Error(ghErrText(res.status)); }
+      else { var j = await res.json(); sha = j.sha; var parsed = JSON.parse(b64d(j.content)); remote = parsed.data || parsed; }
+      var local = snapshot();
+      var merged = mergeData(local, remote);
+      if(stable(merged)!==stable(local)){
+        state.settings = merged.settings; state.foods = merged.foods; state.injections = merged.injections; state.meta = merged.meta; state.deleted = merged.deleted;
+        ui.model = ui.model || state.settings.model;
+        saveLocal(); renderAll();
+      }
+      if(remote && stable(merged)===stable(mergeData(remote, null))){ break; }
+      var body = {message:"Sync "+new Date().toISOString(), content:b64e(JSON.stringify({app:"bolusrechner", version:2, saved:new Date().toISOString(), data:merged}, null, 1))};
+      if(sha) body.sha = sha;
+      var put = await fetch(ghUrl(), {method:"PUT", headers:ghHeaders(), body:JSON.stringify(body)});
+      if(put.status===409 || put.status===422){ continue; }
+      if(!put.ok){ throw new Error(ghErrText(put.status)); }
+      break;
+    }
+    gh.lastSync = Date.now(); gh.lastError = ""; saveGh();
+  }catch(e){
+    gh.lastError = (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) ? e.message : "keine Verbindung zu GitHub"; saveGh();
+  }finally{
+    ghBusy = false; renderSyncStatus();
+    if(ghAgain){ ghAgain=false; setTimeout(ghSync, 500); }
+  }
+}
+function renderSyncStatus(mode){
+  var st = document.getElementById("ghStatus");
+  if(!ghReady()){
+    if(!db) setSync("nur auf diesem Gerät");
+    if(st) st.textContent = gh.repo||gh.token ? "Bitte Repository und Token eintragen." : "Nicht verbunden.";
+    return;
+  }
+  var t = gh.lastSync ? new Date(gh.lastSync) : null;
+  if(mode==="busy"){ setSync("synchronisiere …"); }
+  else if(mode==="offline"){ setSync("offline"); }
+  else if(gh.lastError){ setSync("Sync-Fehler"); }
+  else if(t){ setSync("Sync "+hhmm(t)); }
+  if(st){
+    st.style.color = gh.lastError ? "var(--red)" : "";
+    st.textContent = gh.lastError ? "Fehler: "+gh.lastError :
+      (t ? "Verbunden mit "+gh.repo+". Letzter Abgleich: "+t.toLocaleDateString("de-DE")+" "+hhmm(t)+"." : "Verbunden mit "+gh.repo+".") + (gh.warn ? " "+gh.warn : "");
+  }
+}
+function renderGhForm(){
+  var b = document.getElementById("ghBlock"); if(inFrame){ b.classList.add("hidden"); return; }
+  document.getElementById("ghRepo").value = gh.repo;
+  document.getElementById("ghToken").value = gh.token;
+  renderSyncStatus();
+}
+document.getElementById("ghSave").addEventListener("click", async function(){
+  var repo = document.getElementById("ghRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/+$/,"");
+  var token = document.getElementById("ghToken").value.trim();
+  if(!/^[^\/\s]+\/[^\/\s]+$/.test(repo)){ toast("Repository bitte als benutzername/name eingeben"); return; }
+  if(!token){ toast("Bitte den Token eintragen"); return; }
+  gh.repo = repo; gh.token = token; gh.lastError = ""; gh.warn = ""; saveGh();
+  document.getElementById("ghRepo").value = repo;
+  var st = document.getElementById("ghStatus"); st.style.color=""; st.textContent = "Prüfe Verbindung …";
+  try{
+    var r = await fetch("https://api.github.com/repos/"+repo, {headers:ghHeaders(), cache:"no-store"});
+    if(!r.ok){ gh.lastError = ghErrText(r.status); saveGh(); renderSyncStatus(); return; }
+    var info = await r.json();
+    if(!info.private) gh.warn = "Achtung: Dieses Repository ist ÖFFENTLICH – deine Daten wären für alle sichtbar. Bitte auf privat stellen!";
+    saveGh();
+  }catch(e){ gh.lastError = "keine Verbindung zu GitHub"; saveGh(); renderSyncStatus(); return; }
+  await ghSync(); toast(gh.lastError ? "Verbindung fehlgeschlagen" : "Synchronisation eingerichtet");
+});
+document.getElementById("ghNow").addEventListener("click", function(){ if(!ghReady()){ toast("Erst Repository und Token eintragen"); return; } ghSync(); });
+document.getElementById("ghOff").addEventListener("click", function(){
+  confirmDlg("Synchronisation trennen?", "Der Token wird von diesem Gerät entfernt. Deine Daten bleiben hier und im Repository erhalten.", "Trennen", function(){
+    gh = {repo:"", token:"", path:"bolus-daten.json", lastSync:0, lastError:"", warn:""}; saveGh(); renderGhForm(); setSync("nur auf diesem Gerät"); toast("Getrennt");
+  });
+});
+window.addEventListener("online", function(){ ghSync(); });
 
 // ---------- Events ----------
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
@@ -980,14 +1112,18 @@ function renderAll(){ renderBackup(); renderIOB(); renderSlots(); renderCalc(); 
 // ---------- Start ----------
 document.getElementById("appVersion").textContent = "v" + APP_VERSION;
 loadLocal();
+loadGh();
 ui.model = state.settings.model;
 nowForInput();
 renderRecipe();
 renderAll();
 connect();
+renderGhForm();
+ghSync();
+setInterval(function(){ if(!document.hidden) ghSync(); }, 120000);
 if("serviceWorker" in navigator && location.protocol==="https:" && window.top===window && !/claude\.ai$|claudeusercontent/.test(location.hostname)){ navigator.serviceWorker.register("sw.js?v="+APP_VERSION).catch(function(){}); }
 setInterval(function(){ renderIOB(); renderRecent(); renderCalc(); if(!ui.slotManual) renderSlots(); }, 30000);
-document.addEventListener("visibilitychange", function(){ if(!document.hidden){ nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
+document.addEventListener("visibilitychange", function(){ if(!document.hidden){ ghSync(); nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
 })();
 </script>
 </body>
