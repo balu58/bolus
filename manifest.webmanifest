@@ -1,0 +1,14 @@
+{
+  "name": "Bolusrechner",
+  "short_name": "Bolus",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEF2F6",
+  "theme_color": "#2463D6",
+  "lang": "de",
+  "icons": [
+    {"src": "icon-192.png?v=4", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
