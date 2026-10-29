@@ -21,7 +21,10 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
   - „Übernehmen“ rundet auf die kleinste Pen-Einheit (0,1 / 0,5 / 1 IE)
 - **Aktives Insulin** mit Verlaufskurve (−2 bis +2 Std.)
   - benutzerdefinierte Wirkkurve: gemessene Werte, linear interpoliert, nach 240 Min. = 0
-  - Formel nach Juggluco als umschaltbare Alternative (Umschalter „Eigene | Fiasp“)
+  - Formel nach Juggluco für Fiasp
+  - Standardmodell (wie Loop/OpenAPS) mit Vorlagen für Rapid- und Ultra-rapid-Insuline,
+    Wirkmaximum und Wirkdauer einstellbar – für einen Insulinwechsel ohne eigene Messreihe
+  - Umschalter „Eigene | Fiasp | Standard“, Vergleichstabelle aller drei Modelle in den Einstellungen
 - **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)

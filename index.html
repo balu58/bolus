@@ -169,7 +169,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="iob-top">
       <div><span class="iob-value num" id="iobNow">0,0</span><span class="iob-unit">IE aktiv</span></div>
       <div class="iob-side">
-        <div class="seg" role="group" aria-label="Rechenmodell"><button type="button" data-model="profile">Eigene</button><button type="button" data-model="juggluco">Fiasp</button></div>
+        <div class="seg" role="group" aria-label="Rechenmodell"><button type="button" data-model="profile">Eigene</button><button type="button" data-model="juggluco">Fiasp</button><button type="button" data-model="exp">Standard</button></div>
         <div class="iob-cmp" id="iobCmp"></div>
       </div>
     </div>
@@ -274,10 +274,22 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="block">
       <h2 style="margin-top:0">Rechnen mit</h2>
       <div class="fields" style="margin-top:0">
-        <div><label for="modelSel">Standardmodell für IOB</label><select id="modelSel"><option value="profile">Benutzerdefiniert</option><option value="juggluco">Fiasp Formel (Juggluco)</option></select></div>
+        <div><label for="modelSel">IOB-Algorithmus</label><select id="modelSel"><option value="profile">Benutzerdefiniert (Messkurve)</option><option value="juggluco">Fiasp Formel (Juggluco)</option><option value="exp">Standardmodell (Loop/OpenAPS)</option></select></div>
         <div><label for="stepSel">Kleinste Einheit Pen</label><select id="stepSel"><option value="0.1">0,1 IE</option><option value="0.5">0,5 IE</option><option value="1">1 IE</option></select></div>
       </div>
       <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
+    </div>
+    <div class="block">
+      <h2 style="margin-top:0">Standardmodell (Loop/OpenAPS)</h2>
+      <p class="muted small">Beschreibt schnell wirksame Insuline über Wirkmaximum und Wirkdauer – ohne eigene Messreihe. Werte vor der Nutzung mit dem Diabetes-Team abstimmen.</p>
+      <div style="margin-top:8px"><label for="expPreset">Vorlage</label><select id="expPreset" style="font-size:1rem"></select></div>
+      <div class="fields" style="margin-top:10px">
+        <div><label for="expPeak">Wirkmaximum (Min.)</label><input id="expPeak" inputmode="numeric" autocomplete="off"></div>
+        <div><label for="expDur">Wirkdauer (Min.)</label><input id="expDur" inputmode="numeric" autocomplete="off"></div>
+      </div>
+      <p class="small" id="expMsg" style="margin-top:6px"></p>
+      <h2 style="margin:14px 0 6px;font-size:.95rem">Vergleich: noch aktiver Anteil</h2>
+      <div class="scroll"><table class="grid" id="cmpTable"><thead><tr><th>Minute</th><th>Eigene</th><th>Fiasp</th><th>Standard</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="block">
       <h2 style="margin-top:0">Benutzerdefinierte Wirkkurve</h2>
@@ -334,7 +346,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "11.6";
+var APP_VERSION = "12";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -348,8 +360,16 @@ var DEFAULT_SETTINGS = {
   refBolus:11.5,
   profile:[[0,11.5],[15,11.2],[30,10.6],[45,9.9],[60,8.8],[75,7.6],[90,6.3],[105,5.1],[120,3.8],[135,2.9],[150,2.1],[165,1.5],[180,1],[195,0.7],[210,0.4],[225,0.2],[240,0]],
   model:"profile",
-  step:0.5
+  step:0.5,
+  exp:{preset:"ultra", peak:55, dur:360}
 };
+// Vorlagen für das Standardmodell (Loop/OpenAPS): Wirkmaximum und Wirkdauer in Minuten
+var EXP_PRESETS = {
+  ultra:{label:"Ultra-rapid – Fiasp, Lyumjev", peak:55, dur:360},
+  rapid:{label:"Rapid – Humalog, NovoRapid, Apidra", peak:75, dur:360},
+  custom:{label:"Eigene Werte"}
+};
+var MODEL_NAMES = {profile:"Eigene", juggluco:"Fiasp", exp:"Standard"};
 var DEFAULT_FOODS = [
   {id:"f1", name:"Banane", unit:"100g", ke:1.8},
   {id:"f2", name:"Johannisbeeren", unit:"100g", ke:0.8},
@@ -381,7 +401,8 @@ function loadLocal(){
   }catch(e){}
 }
 function fixSettings(x){
-  if(x.model!=="juggluco") x.model = "profile";   // fehlende oder alte Bezeichnungen umstellen
+  if(!MODEL_NAMES[x.model]) x.model = "profile";   // fehlende oder alte Bezeichnungen umstellen
+  if(!x.exp || !(x.exp.peak>0) || !(x.exp.dur>0) || x.exp.peak >= x.exp.dur/2) x.exp = clone(DEFAULT_SETTINGS.exp);
   if(!(x.step>0)) x.step = 0.5;
   if(!x.slots || !x.slots.length) x.slots = clone(DEFAULT_SETTINGS.slots);
   delete x.cmpJuggluco;
@@ -447,7 +468,16 @@ function fracJ(min){
   if(min<0) return 0;
   return Math.max(0, 5.7952464925654*Math.exp(-0.016029021581167327*min) - 4.7952464925654*Math.exp(-0.019371711389922493*min));
 }
-function activeFrac(){ return ui.model==="juggluco" ? fracJ : fracProfile; }
+// Standardmodell (exponentielles Insulinmodell wie in Loop/OpenAPS): tp = Wirkmaximum, td = Wirkdauer
+function fracExpWith(min, tp, td){
+  if(min<0) return 0; if(min>=td) return 0;
+  var tau = tp*(1-tp/td)/(1-2*tp/td), a = 2*tau/td, S = 1/(1-a+(1+a)*Math.exp(-td/tau));
+  var v = 1 - S*(1-a)*((min*min/(tau*td*(1-a)) - min/tau - 1)*Math.exp(-min/tau) + 1);
+  return Math.min(1, Math.max(0, v));
+}
+function fracExp(min){ var e = state.settings.exp || DEFAULT_SETTINGS.exp; return fracExpWith(min, e.peak, e.dur); }
+function fracFor(m){ return m==="juggluco" ? fracJ : m==="exp" ? fracExp : fracProfile; }
+function activeFrac(){ return fracFor(ui.model); }
 function iobAt(ts, fn){
   fn = fn || activeFrac();
   var sum=0;
@@ -468,8 +498,8 @@ function renderIOB(){
   var v = iobAt(now);
   document.getElementById("iobNow").textContent = fmt(v);
   var cmp = document.getElementById("iobCmp");
-  var other = ui.model==="juggluco";
-  cmp.textContent = (other?"Eigene: ":"Fiasp: ")+fmt(iobAt(now, other?fracProfile:fracJ))+" IE";
+  cmp.textContent = Object.keys(MODEL_NAMES).filter(function(m){ return m!==ui.model; })
+    .map(function(m){ return MODEL_NAMES[m]+": "+fmt(iobAt(now, fracFor(m))); }).join(" · ")+" IE";
   document.querySelectorAll(".seg button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.model===ui.model)); });
   // curve -2h .. +2h
   var W=340,H=110,top=8,bottom=88,left=4,right=336;
@@ -729,6 +759,7 @@ function renderSettings(){
   renderPct();
   var rb = document.getElementById("refBolus"); rb.value = fmt(S.refBolus,1);
   document.getElementById("modelSel").value = S.model;
+  renderExp();
   document.getElementById("stepSel").value = String(S.step);
   var pt = document.querySelector("#profTable tbody"); pt.innerHTML="";
   S.profile.sort(function(a,b){return a[0]-b[0];});
@@ -1128,6 +1159,43 @@ document.getElementById("pct").addEventListener("change", renderPct);
 document.getElementById("pctMinus").addEventListener("click", function(){ setPct((num(state.settings.pct)||0)-5); });
 document.getElementById("pctPlus").addEventListener("click", function(){ setPct((num(state.settings.pct)||0)+5); });
 document.getElementById("refBolus").addEventListener("change", function(e){ var v=num(e.target.value); if(v>0){ state.settings.refBolus=v; persist("settings"); renderSettings(); renderIOB(); renderCalc(); } else { e.target.value=fmt(state.settings.refBolus,1); toast("Bitte eine Zahl größer 0 eingeben"); } });
+function renderExp(){
+  var S = state.settings, e = S.exp, sel = document.getElementById("expPreset");
+  if(!sel.options.length) Object.keys(EXP_PRESETS).forEach(function(k){ sel.appendChild(el("option",{value:k}, EXP_PRESETS[k].label)); });
+  sel.value = e.preset in EXP_PRESETS ? e.preset : "custom";
+  var pk = document.getElementById("expPeak"), du = document.getElementById("expDur");
+  if(document.activeElement!==pk) pk.value = fmt(e.peak,0); if(document.activeElement!==du) du.value = fmt(e.dur,0);
+  var tb = document.querySelector("#cmpTable tbody"); tb.innerHTML="";
+  [30,60,90,120,180,240,300].forEach(function(m){
+    var tr = el("tr"); tr.appendChild(el("td",{class:"num"}, String(m)));
+    ["profile","juggluco","exp"].forEach(function(k){ tr.appendChild(el("td",{class:"num"}, fmt(100*fracFor(k)(m),0)+" %")); });
+    tb.appendChild(tr);
+  });
+}
+function applyExp(peak, dur, preset){
+  var msg = document.getElementById("expMsg");
+  if(!(peak>0) || !(dur>0)){ msg.style.color="var(--red)"; msg.textContent="Bitte Zahlen größer 0 eingeben."; return false; }
+  if(peak >= dur/2){ msg.style.color="var(--red)"; msg.textContent="Das Wirkmaximum muss kleiner als die halbe Wirkdauer sein."; return false; }
+  if(dur < 120 || dur > 600){ msg.style.color="var(--red)"; msg.textContent="Die Wirkdauer muss zwischen 120 und 600 Minuten liegen."; return false; }
+  msg.textContent = "";
+  state.settings.exp = {preset:preset, peak:peak, dur:dur};
+  persist("settings"); renderExp(); renderIOB(); renderCalc(); renderRecent(); renderLog();
+  return true;
+}
+document.getElementById("expPreset").addEventListener("change", function(e){
+  var k = e.target.value, p = EXP_PRESETS[k], cur = state.settings.exp;
+  if(k==="custom"){ applyExp(cur.peak, cur.dur, "custom"); return; }
+  var dur = cur.dur; if(!(p.peak < dur/2)) dur = p.dur;   // eigene Wirkdauer beibehalten
+  applyExp(p.peak, dur, k);
+});
+["expPeak","expDur"].forEach(function(id){
+  document.getElementById(id).addEventListener("change", function(){
+    var pk = num(document.getElementById("expPeak").value), du = num(document.getElementById("expDur").value);
+    var e = state.settings.exp, preset = e.preset;
+    if(preset!=="custom" && (pk!==EXP_PRESETS[preset].peak)) preset = "custom";
+    if(!applyExp(pk, du, preset)){ /* ungültig: Felder bleiben zur Korrektur stehen */ }
+  });
+});
 document.getElementById("modelSel").addEventListener("change", function(e){ state.settings.model = e.target.value; ui.model = e.target.value; persist("settings"); renderIOB(); renderCalc(); renderRecent(); renderLog(); });
 document.getElementById("stepSel").addEventListener("change", function(e){ state.settings.step = +e.target.value; persist("settings"); renderCalc(); });
 document.querySelectorAll(".seg button").forEach(function(b){ b.addEventListener("click", function(){ ui.model = b.dataset.model; renderIOB(); renderCalc(); renderRecent(); renderLog(); }); });
