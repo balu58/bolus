@@ -346,7 +346,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "12";
+var APP_VERSION = "12.1";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1114,6 +1114,18 @@ document.getElementById("injSave").addEventListener("click", function(){
   if(!isFinite(u) || u<0) u = 0;
   if(u<=0 && keEat<=0){ toast("Bitte gespritzte IE oder gegessene KE eingeben"); return; }
   if(!(bzIn>0)){ toast("Bitte den BZ eingeben"); var bzf=document.getElementById("injBz"); bzf.classList.add("missing"); bzf.focus(); return; }
+  if(u<=0){
+    // Mahlzeit ohne Insulin: bewusst bestätigen lassen (z. B. vergessenes „Übernehmen“)
+    var sg = calc(), val = sg.pct ? sg.suggPct : sg.sugg;
+    document.getElementById("injU").classList.add("missing");
+    confirmDlg("Wirklich ohne Insulin speichern?",
+      "Im Feld „Gespritzt (IE)“ ist nichts eingetragen."+(val>0.05 ? " Der Vorschlag liegt bei "+fmt(val)+" IE." : "")+" Für eine reine Mahlzeit (z. B. Traubenzucker) bestätigen, sonst abbrechen und die Insulinmenge eintragen.",
+      "Ohne Insulin speichern", function(){ document.getElementById("injU").classList.remove("missing"); saveEntry(u, keEat, bzIn); });
+    return;
+  }
+  saveEntry(u, keEat, bzIn);
+});
+function saveEntry(u, keEat, bzIn){
   var tv = document.getElementById("injT").value || hhmm(new Date());
   var now = new Date(); var d = new Date(now); var p = tv.split(":"); d.setHours(+p[0], +p[1], 0, 0);
   if(d.getTime() > now.getTime()+5*60000) d = new Date(d.getTime()-86400000);
@@ -1130,7 +1142,8 @@ document.getElementById("injSave").addEventListener("click", function(){
   ui.basket=[]; renderBasket();
   ui.slotManual=false;
   renderAll(); toast((u>0?fmt(u)+" IE":fmt(keEat)+" KE")+" um "+hhmm(d)+" gespeichert");
-});
+}
+document.getElementById("injU").addEventListener("input", function(e){ e.target.classList.remove("missing"); });
 document.getElementById("foodSearch").addEventListener("input", renderFoods);
 document.getElementById("foodNew").addEventListener("click", function(){ foodDlg(null); });
 document.getElementById("basketClear").addEventListener("click", function(){ ui.basket=[]; renderBasket(); });
