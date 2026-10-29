@@ -141,8 +141,8 @@ input[type="time"]::-webkit-date-and-time-value{text-align:left}.slotgrid label{
 /* nav */
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--nav);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
-nav .inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
-nav button{font:inherit;font-size:.82rem;background:transparent;border:0;color:var(--muted);padding:10px 4px 12px;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav .inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav button{font:inherit;font-size:.74rem;background:transparent;border:0;color:var(--muted);padding:10px 1px 12px;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav button svg{width:22px;height:22px}
 nav button[aria-current="page"]{color:var(--accent);font-weight:700}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.92rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:6;max-width:90%}
@@ -184,7 +184,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
   <!-- RECHNER -->
   <section id="view-calc">
     <div class="block">
-      <div class="slots" id="slots" role="group" aria-label="Profil"></div>
+      <div class="slots" id="slots" role="group" aria-label="Tageszeit"></div>
       <div class="fields">
         <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"></div>
         <div><label for="ke">KE</label><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
@@ -216,6 +216,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <h2 style="margin-top:0">Letzte Injektionen</h2>
       <ul class="list" id="recent"></ul>
     </div>
+    <p class="muted small" style="margin:16px 4px">Eigener Rechner, kein Medizinprodukt. Vorschläge bitte überprüfen.</p>
   </section>
 
   <!-- ESSEN -->
@@ -264,11 +265,19 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
   <!-- EINSTELLUNGEN -->
   <section id="view-set" class="hidden">
     <div class="block">
-      <h2 style="margin-top:0">Profile</h2>
-      <p class="muted small">Name frei wählbar oder aus der Liste. „Ab“ legt fest, welches Profil der Rechner vorschlägt. Du kannst es im Rechner jederzeit antippen und wechseln. KI = 10 ÷ KE-Faktor.</p>
+      <h2 style="margin-top:0">Insulin/Kohlenhydrat-Verhältnisse</h2>
+      <p class="muted small">Name frei wählbar oder aus der Liste. „Ab“ legt fest, welche Werte der Rechner zur Uhrzeit vorschlägt. Im Rechner kannst du jederzeit eine andere Tageszeit antippen. KI = 10 ÷ KE-Faktor.</p>
       <div id="slotTable"></div>
       <datalist id="slotNames"><option value="Früh"><option value="Vormittag"><option value="Mittag"><option value="Nachmittag"><option value="Abend"><option value="Spätabend"><option value="Nacht"><option value="Zwischenmahlzeit"></datalist>
-      <button class="secondary" id="slotAdd" style="width:100%;margin-top:8px">Profil hinzufügen</button>
+      <button class="secondary" id="slotAdd" style="width:100%;margin-top:8px">Tageszeit hinzufügen</button>
+    </div>
+    <div class="block">
+      <h2 style="margin-top:0">Rechnen mit</h2>
+      <div class="fields" style="margin-top:0">
+        <div><label for="modelSel">Standardmodell für IOB</label><select id="modelSel"><option value="profile">Wirkprofil</option><option value="juggluco">Formel (Juggluco)</option></select></div>
+        <div><label for="stepSel">Kleinste Einheit Pen</label><select id="stepSel"><option value="0.1">0,1 IE</option><option value="0.5">0,5 IE</option><option value="1">1 IE</option></select></div>
+      </div>
+      <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
     </div>
     <div class="block">
       <h2 style="margin-top:0">Wirkprofil</h2>
@@ -281,16 +290,21 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <button class="ghost" id="profAdd">Punkt hinzufügen</button>
     </div>
     <div class="block">
-      <h2 style="margin-top:0">Rechnen</h2>
-      <div class="fields" style="margin-top:0">
-        <div><label for="modelSel">Standardmodell für IOB</label><select id="modelSel"><option value="profile">Wirkprofil</option><option value="juggluco">Formel (Juggluco)</option></select></div>
-        <div><label for="stepSel">Kleinste Einheit Pen</label><select id="stepSel"><option value="0.1">0,1 IE</option><option value="0.5">0,5 IE</option><option value="1">1 IE</option></select></div>
+      <h2 style="margin-top:0">Sicherung</h2>
+      <p class="muted small">„Jetzt sichern“ öffnet das Teilen-Menü. Dort OneDrive oder „In Dateien sichern“ wählen.</p>
+      <p class="small" id="backupInfo"></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="secondary" id="exportBtn">Jetzt sichern</button>
+        <button class="secondary" id="importBtn">Wiederherstellen</button>
       </div>
-      <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
     </div>
+  </section>
+
+  <!-- ZUGANG (private Daten, nicht Teil der Sicherung) -->
+  <section id="view-key" class="hidden">
     <div class="block" id="ghBlock">
       <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
-      <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist nicht Teil der Sicherung.</p>
+      <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist – wie alles in diesem Bereich – nicht Teil der Sicherung.</p>
       <div style="margin-top:10px"><label for="ghRepo">Repository (benutzername/name)</label><input id="ghRepo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="benutzername/bolus-daten" style="font-size:1rem"></div>
       <div style="margin-top:10px"><label for="ghToken">Zugangs-Token</label><input id="ghToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" style="font-size:1rem"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
@@ -300,16 +314,6 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       </div>
       <p class="small" id="ghStatus" style="margin-top:10px"></p>
     </div>
-    <div class="block">
-      <h2 style="margin-top:0">Sicherung</h2>
-      <p class="muted small">„Jetzt sichern“ öffnet das Teilen-Menü. Dort OneDrive oder „In Dateien sichern“ wählen.</p>
-      <p class="small" id="backupInfo"></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="secondary" id="exportBtn">Jetzt sichern</button>
-        <button class="secondary" id="importBtn">Wiederherstellen</button>
-      </div>
-    </div>
-    <p class="muted small" style="margin:16px 4px">Eigener Rechner, kein Medizinprodukt. Vorschläge anfangs mit deiner Bolus-App vergleichen.</p>
   </section>
 </main>
 
@@ -318,6 +322,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
   <button data-view="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7c0-2 2-2 2-4M14 7c0-2 2-2 2-4"/></svg>Essen</button>
   <button data-view="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Verlauf</button>
   <button data-view="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Einstellungen</button>
+  <button data-view="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l3 3M14.5 8.5l2 2"/></svg>Zugang</button>
 </div></nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -329,7 +334,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "11.4";
+var APP_VERSION = "11.5";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -701,8 +706,8 @@ function renderSettings(){
     nw.appendChild(nin); head.appendChild(nw);
     var rm = el("button",{class:"ghost",type:"button"},"Entfernen");
     rm.addEventListener("click", function(){
-      if(S.slots.length<=1){ toast("Mindestens ein Profil nötig"); return; }
-      confirmDlg("Profil entfernen?", s.name+" ab "+s.from, "Entfernen", function(){ S.slots.splice(si,1); ui.slotManual=false; persist("settings"); renderSettings(); renderSlots(); renderCalc(); });
+      if(S.slots.length<=1){ toast("Mindestens eine Tageszeit nötig"); return; }
+      confirmDlg("Tageszeit entfernen?", s.name+" ab "+s.from, "Entfernen", function(){ S.slots.splice(si,1); ui.slotManual=false; persist("settings"); renderSettings(); renderSlots(); renderCalc(); });
     });
     head.appendChild(rm);
     wrap.appendChild(head);
@@ -1136,14 +1141,14 @@ document.getElementById("exportBtn").addEventListener("click", exportData);
 document.getElementById("slotAdd").addEventListener("click", function(){
   var S = state.settings, base = S.slots[ui.slot] || S.slots[0];
   S.slots.push({name:"Zwischenmahlzeit", from:hhmm(new Date()).slice(0,3)+"00", ziel:base.ziel, korr:base.korr, ke:base.ke});
-  persist("settings"); renderSettings(); renderSlots(); toast("Profil angelegt, Werte bitte prüfen");
+  persist("settings"); renderSettings(); renderSlots(); toast("Tageszeit angelegt, Werte bitte prüfen");
 });
 document.getElementById("backupNow").addEventListener("click", exportData);
 document.getElementById("importBtn").addEventListener("click", importData);
 
 function show(v){
   ui.view = v;
-  ["calc","food","log","set"].forEach(function(n){ document.getElementById("view-"+n).classList.toggle("hidden", n!==v); });
+  ["calc","food","log","set","key"].forEach(function(n){ document.getElementById("view-"+n).classList.toggle("hidden", n!==v); });
   document.querySelectorAll("nav button").forEach(function(b){ if(b.dataset.view===v) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   if(v==="log") renderLog();
   window.scrollTo(0,0);

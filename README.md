@@ -9,7 +9,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 
 | Rechner | Essen | Verlauf | Einstellungen |
 |:---:|:---:|:---:|:---:|
-| <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Injektionen der letzten 3 Tage"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Profile und Einstellungen"> |
+| <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Injektionen der letzten 3 Tage"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Insulin/Kohlenhydrat-Verhältnisse und Einstellungen"> |
 
 *Beispieldaten: 7,5 IE um 11:02, Abfrage um 12:40, BZ 172, KE als Formel `4,2*0,88`.*
 
@@ -22,10 +22,10 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 - **Aktives Insulin** mit Verlaufskurve (−2 bis +2 Std.)
   - Wirkprofil: gemessene Werte, linear interpoliert, nach 240 Min. = 0
   - Formel (nach Juggluco) als umschaltbare Alternative
-- **Profile** frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
+- **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
-- **Synchronisation** zwischen Geräten über ein privates GitHub-Repository
+- **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
 - **Sicherung** aller Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
 
 ## Synchronisation zwischen Geräten (GitHub)
@@ -39,7 +39,7 @@ Die App kann ihre Daten automatisch über ein **zweites, privates** Repository a
 1. **Privates Daten-Repository anlegen:** GitHub → „+“ → *New repository*, Name z. B. `bolus-daten`,
    Sichtbarkeit **Private**, Haken bei *Add a README file*.
 2. **Token erstellen** – siehe [Token generieren](#token-generieren) weiter unten.
-3. **In der App:** Einstellungen → *Synchronisation (GitHub)* → Repository `benutzername/bolus-daten`
+3. **In der App:** Tab **Zugang** (Schlüssel-Symbol) → *Synchronisation (GitHub)* → Repository `benutzername/bolus-daten`
    und Token eintragen → **Verbinden**. Auf jedem Gerät wiederholen (gleicher oder eigener Token).
 
 ### Token generieren
@@ -81,7 +81,7 @@ Repository** lesen und schreiben.
   1 Jahr ist ein guter Kompromiss zwischen Sicherheit und Aufwand.
 - GitHub schickt einige Tage vor Ablauf eine **Erinnerungs-E-Mail**.
 - Nach Ablauf läuft die App normal weiter, nur der Abgleich stoppt
-  (Einstellungen: „Token ungültig oder abgelaufen“, oben: „Sync-Fehler“). Es gehen keine Daten verloren.
+  (Tab Zugang: „Token ungültig oder abgelaufen“, oben: „Sync-Fehler“). Es gehen keine Daten verloren.
 - Erneuern: neuen Token wie oben erstellen (oder beim alten Token **Regenerate token**),
   auf jedem Gerät in der App eintragen → **Verbinden**.
 
