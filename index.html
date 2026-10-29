@@ -169,7 +169,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="iob-top">
       <div><span class="iob-value num" id="iobNow">0,0</span><span class="iob-unit">IE aktiv</span></div>
       <div class="iob-side">
-        <div class="seg" role="group" aria-label="Rechenmodell"><button type="button" data-model="profile">Profil</button><button type="button" data-model="juggluco">Formel</button></div>
+        <div class="seg" role="group" aria-label="Rechenmodell"><button type="button" data-model="profile">Eigene</button><button type="button" data-model="juggluco">Fiasp</button></div>
         <div class="iob-cmp" id="iobCmp"></div>
       </div>
     </div>
@@ -274,13 +274,13 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="block">
       <h2 style="margin-top:0">Rechnen mit</h2>
       <div class="fields" style="margin-top:0">
-        <div><label for="modelSel">Standardmodell für IOB</label><select id="modelSel"><option value="profile">Wirkprofil</option><option value="juggluco">Formel (Juggluco)</option></select></div>
+        <div><label for="modelSel">Standardmodell für IOB</label><select id="modelSel"><option value="profile">Benutzerdefiniert</option><option value="juggluco">Fiasp Formel (Juggluco)</option></select></div>
         <div><label for="stepSel">Kleinste Einheit Pen</label><select id="stepSel"><option value="0.1">0,1 IE</option><option value="0.5">0,5 IE</option><option value="1">1 IE</option></select></div>
       </div>
       <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
     </div>
     <div class="block">
-      <h2 style="margin-top:0">Wirkprofil</h2>
+      <h2 style="margin-top:0">Benutzerdefinierte Wirkkurve</h2>
       <p class="muted small">Gemessene Werte des aktiven Insulins nach einem einzelnen Bolus. Dazwischen wird linear interpoliert, ab dem letzten Punkt ist das aktive Insulin 0.</p>
       <div style="max-width:200px"><label for="refBolus">Bolus der Messreihe (IE)</label><input id="refBolus" inputmode="decimal" autocomplete="off"></div>
       <div class="scroll" style="margin-top:10px"><table class="grid" id="profTable">
@@ -334,7 +334,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "11.5";
+var APP_VERSION = "11.6";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -469,7 +469,7 @@ function renderIOB(){
   document.getElementById("iobNow").textContent = fmt(v);
   var cmp = document.getElementById("iobCmp");
   var other = ui.model==="juggluco";
-  cmp.textContent = (other?"Profil: ":"Formel: ")+fmt(iobAt(now, other?fracProfile:fracJ))+" IE";
+  cmp.textContent = (other?"Eigene: ":"Fiasp: ")+fmt(iobAt(now, other?fracProfile:fracJ))+" IE";
   document.querySelectorAll(".seg button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.model===ui.model)); });
   // curve -2h .. +2h
   var W=340,H=110,top=8,bottom=88,left=4,right=336;
