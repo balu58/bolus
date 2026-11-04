@@ -359,7 +359,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "12.2";
+var APP_VERSION = "12.3";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -786,12 +786,12 @@ function renderSettings(){
         var v = num(inp.value);
         if(!isFinite(v) || v<0){ inp.value = fmt(p[k],k?1:0); toast("Bitte eine Zahl eingeben"); return; }
         p[k]=v; persist("settings");
-        if(k===0) renderSettings(); else share.textContent = fmt(100*p[1]/S.refBolus,1)+" %";
+        if(k===0) renderSettings(); else share.textContent = fmt(100*p[1]/S.refBolus,0)+" %";
         renderIOB(); renderCalc();
       });
       td.appendChild(inp); tr.appendChild(td);
     });
-    share = el("td",{class:"num"}, fmt(100*p[1]/S.refBolus,1)+" %"); tr.appendChild(share);
+    share = el("td",{class:"num"}, fmt(100*p[1]/S.refBolus,0)+" %"); tr.appendChild(share);
     var td = el("td"); var rm = el("button",{class:"ghost",type:"button","aria-label":"Punkt entfernen"},"×");
     rm.addEventListener("click", function(){
       if(S.profile.length<=2){ toast("Mindestens zwei Punkte nötig"); return; }
