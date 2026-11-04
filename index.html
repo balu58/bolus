@@ -64,6 +64,12 @@ p{margin:0 0 8px}
 .cgm.high{border-color:var(--yellow);background:var(--yellow-soft)}
 .cgm.stale{opacity:.55}
 .cgm.err{border-color:var(--red)}
+.secretwrap{display:grid;grid-template-columns:1fr 48px;gap:6px}
+.secretwrap .eye{font:inherit;font-size:1.1rem;border:1px solid var(--line);background:var(--bg);border-radius:12px;min-height:48px;color:var(--ink)}
+.secretwrap .eye[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+input.masked{-webkit-text-security:disc;text-security:disc}
+.secretinfo{color:var(--muted);margin-top:4px;min-height:1.1em;overflow-wrap:anywhere}
+.secretinfo.warn{color:var(--red)}
 .bzsrc{font-size:.78rem;color:var(--muted);min-height:1.1em;margin-top:2px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{font:inherit;font-size:.82rem;border:0;background:transparent;color:var(--muted);padding:6px 10px;min-height:34px}
@@ -347,7 +353,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><label for="cgmTimeout">Timeout (Sek.)</label><input id="cgmTimeout" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
         <div><label for="cgmPoll">Polling-Intervall (Sek.)</label><input id="cgmPoll" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
       </div>
-      <div style="margin-top:10px"><label for="cgmKey">API-Schlüssel (optional)</label><input id="cgmKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="leer = ohne Schlüssel" style="font-size:1rem"></div>
+      <div style="margin-top:10px"><label for="cgmKey">API-Schlüssel (optional)</label><div class="secretwrap"><input id="cgmKey" name="x-cgm-k" type="text" class="secret masked" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="leer = ohne Schlüssel" style="font-size:1rem"><button type="button" class="eye" data-for="cgmKey" aria-label="Schlüssel anzeigen">👁</button></div><div class="secretinfo small" id="cgmKeyInfo"></div></div>
       <p class="muted small" style="margin-top:4px">Wird als Header <code>X-Api-Key</code> mitgeschickt. Leer lassen, wenn dein Dienst keinen Schlüssel verlangt.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="primary" id="cgmSave" style="width:auto;flex:1">Speichern &amp; testen</button>
@@ -360,7 +366,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
       <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist – wie alles in diesem Bereich – nicht Teil der Sicherung.</p>
       <div style="margin-top:10px"><label for="ghRepo">Repository (benutzername/name)</label><input id="ghRepo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="benutzername/bolus-daten" style="font-size:1rem"></div>
-      <div style="margin-top:10px"><label for="ghToken">Zugangs-Token</label><input id="ghToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" style="font-size:1rem"></div>
+      <div style="margin-top:10px"><label for="ghToken">Zugangs-Token</label><div class="secretwrap"><input id="ghToken" name="x-gh-t" type="text" class="secret masked" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="github_pat_…" style="font-size:1rem"><button type="button" class="eye" data-for="ghToken" aria-label="Token anzeigen">👁</button></div><div class="secretinfo small" id="ghTokenInfo"></div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="primary" id="ghSave" style="width:auto;flex:1">Verbinden</button>
         <button class="secondary" id="ghNow">Jetzt synchronisieren</button>
@@ -388,7 +394,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "14.1";
+var APP_VERSION = "14.3";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1108,11 +1114,12 @@ function renderSyncStatus(mode){
 function renderGhForm(){
   document.getElementById("ghRepo").value = gh.repo;
   document.getElementById("ghToken").value = gh.token;
+  renderSecretInfo("ghToken","gh");
   renderSyncStatus();
 }
 document.getElementById("ghSave").addEventListener("click", async function(){
   var repo = document.getElementById("ghRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/+$/,"");
-  var token = document.getElementById("ghToken").value.trim();
+  var token = cleanSecret(document.getElementById("ghToken").value);
   if(!/^[^\/\s]+\/[^\/\s]+$/.test(repo)){ toast("Repository bitte als benutzername/name eingeben"); return; }
   if(!token){ toast("Bitte den Token eintragen"); return; }
   gh.repo = repo; gh.token = token; gh.lastError = ""; gh.warn = ""; saveGh();
@@ -1139,7 +1146,29 @@ window.addEventListener("online", function(){ ghSync(); });
 var CGM_KEY = "bolusrechner-cgm";
 var cgm = {url:"", key:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0};
 var cgmTimer = null, cgmBusy = false;
-var TREND = {doubleup:"⇈", singleup:"↑", fortyfiveup:"↗", flat:"→", fortyfivedown:"↘", singledown:"↓", doubledown:"⇊"};
+var TREND = {doubleup:"⇈", singleup:"↑", fortyfiveup:"↗", flat:"→", fortyfivedown:"↘", singledown:"↓", doubledown:"⇊",
+             "1":"⇈", "2":"↑", "3":"↗", "4":"→", "5":"↘", "6":"↓", "7":"⇊"};   // Dexcom liefert den Trend teils auch als Zahl
+// Geheimnisse bereinigen: Leerzeichen, Zeilenumbrüche und unsichtbare Zeichen aus dem Einfügen entfernen
+function cleanSecret(v){ return String(v||"").replace(/[\s\u00A0\u200B-\u200D\u2060\uFEFF]/g,""); }
+function secretSummary(v){ v = cleanSecret(v); if(!v) return ""; if(v.length<10) return v.length+" Zeichen"; return v.length+" Zeichen, beginnt mit "+v.slice(0,3)+"…, endet auf …"+v.slice(-3); }
+function renderSecretInfo(id, kind){
+  var raw = document.getElementById(id).value, v = cleanSecret(raw), info = document.getElementById(id+"Info");
+  var msg = secretSummary(raw), warn = false;
+  if(raw && raw!==v){ msg += " (Leerzeichen/unsichtbare Zeichen werden entfernt)"; }
+  if(kind==="cgm" && /^(github_pat_|ghp_)/.test(v)){ msg = "Achtung: Das ist ein GitHub-Token, kein API-Schlüssel."; warn = true; }
+  if(kind==="gh" && v && !/^(github_pat_|ghp_)/.test(v)){ msg += " – sieht nicht wie ein GitHub-Token aus"; warn = true; }
+  info.textContent = msg; info.classList.toggle("warn", warn);
+}
+document.querySelectorAll(".secretwrap .eye").forEach(function(b){
+  b.setAttribute("aria-pressed","false");
+  b.addEventListener("click", function(){
+    var i = document.getElementById(b.dataset.for), show = i.classList.contains("masked");
+    i.classList.toggle("masked", !show); b.setAttribute("aria-pressed", String(show));
+    if(show) setTimeout(function(){ if(!i.classList.contains("masked")){ i.classList.add("masked"); b.setAttribute("aria-pressed","false"); } }, 30000);
+  });
+});
+document.getElementById("cgmKey").addEventListener("input", function(){ renderSecretInfo("cgmKey","cgm"); });
+document.getElementById("ghToken").addEventListener("input", function(){ renderSecretInfo("ghToken","gh"); });
 var CGM_STALE_MIN = 15;   // älter: grau anzeigen und nicht in den Rechner übernehmen
 function loadCgm(){ try{ var o = JSON.parse(localStorage.getItem(CGM_KEY)||"null"); if(o) for(var k in o) cgm[k]=o[k]; }catch(e){} }
 function saveCgm(){ try{ localStorage.setItem(CGM_KEY, JSON.stringify(cgm)); }catch(e){} }
@@ -1153,9 +1182,10 @@ async function fetchCgm(){
   var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, Math.max(5, +cgm.timeout||60)*1000);
   try{
     var hdr = {"Accept":"application/json"};
-    if((cgm.key||"").trim()) hdr["X-Api-Key"] = cgm.key.trim();   // nur mitsenden, wenn eingetragen
+    var k = cleanSecret(cgm.key);
+    if(k) hdr["X-Api-Key"] = k;   // nur mitsenden, wenn eingetragen
     var res = await fetch(cgm.url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:hdr});
-    if(res.status===401 || res.status===403) throw new Error("Schlüssel fehlt oder ist ungültig");
+    if(res.status===401 || res.status===403) throw new Error(k ? "Schlüssel ungültig (gesendet: "+secretSummary(k)+")" : "Schlüssel fehlt – im Feld „API-Schlüssel“ ist nichts gespeichert");
     if(!res.ok) throw new Error("Fehler "+res.status);
     var j = await res.json();
     var v = Number(j.value), t = Number(j.time);
@@ -1209,6 +1239,7 @@ function startCgmPolling(){
 function renderCgmForm(){
   document.getElementById("cgmUrl").value = cgm.url||"";
   document.getElementById("cgmKey").value = cgm.key||"";
+  renderSecretInfo("cgmKey","cgm");
   document.getElementById("cgmTimeout").value = String(cgm.timeout||60);
   document.getElementById("cgmPoll").value = String(cgm.poll||150);
   renderCgm();
@@ -1219,7 +1250,8 @@ document.getElementById("cgmSave").addEventListener("click", function(){
   if(!/^https:\/\//i.test(u)){ toast("Bitte eine https-Adresse eingeben"); return; }
   if(!(to>=5 && to<=120)){ toast("Timeout: 5 bis 120 Sekunden"); return; }
   if(!(po>=30 && po<=3600)){ toast("Polling: 30 bis 3600 Sekunden"); return; }
-  cgm.key = document.getElementById("cgmKey").value.trim();
+  cgm.key = cleanSecret(document.getElementById("cgmKey").value);
+  if(/^(github_pat_|ghp_)/.test(cgm.key)){ toast("Das ist ein GitHub-Token, kein API-Schlüssel"); return; }
   cgm.url = u; cgm.timeout = Math.round(to); cgm.poll = Math.round(po); cgm.lastError = ""; saveCgm();
   startCgmPolling(); fetchCgm().then(function(){ toast(cgm.lastError ? "Abruf fehlgeschlagen" : "Sensor verbunden"); });
 });
