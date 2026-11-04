@@ -72,6 +72,7 @@ input.missing{border-color:var(--red);background:var(--red-soft)}
 .calcitems{font-size:.8rem;color:var(--muted);margin-top:2px}
 .exprhint{font-size:.82rem;color:var(--muted);min-height:1.2em;margin-top:2px}
 .suggest button{white-space:nowrap;flex:0 0 auto}
+.suggest-info{text-align:right;color:var(--muted);max-width:45%}
 .suggest.full{background:var(--bg);border:1px dashed var(--line);margin-top:8px}
 .slothead{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .slothead input{font-size:1rem;font-weight:700;padding:8px;min-height:42px}
@@ -359,7 +360,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "12.3";
+var APP_VERSION = "13";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -570,7 +571,9 @@ function calc(){
 function renderCalc(){
   var r = calc(), box = document.getElementById("result");
   box.innerHTML = "";
+  var injU = document.getElementById("injU");
   if(!isFinite(r.bz) && !r.ke){
+    if(!ui.injUDirty) injU.value = "";
     box.appendChild(el("p",{class:"muted"}, "BZ und KE eingeben, dann erscheint hier der Vorschlag."));
     return;
   }
@@ -589,10 +592,13 @@ function renderCalc(){
   var sg = el("div",{class:"suggest"+(r.pct ? " alt "+(r.pct>0?"plus":"minus") : "")});
   var l = el("div"); l.appendChild(el("div",{class:"small muted"}, "Vorschlag"+(r.pct?" inkl. "+(r.pct>0?"+":"")+fmt(r.pct,0)+" %":"")));
   l.appendChild(el("div",{class:"big num"}, fmt(val)+" IE"));
-  var rv = roundStep(val), st = state.settings.step;
-  var use = el("button",{class:"secondary",type:"button"},"Übernehmen "+fmt(rv, st<1?1:0));
-  use.addEventListener("click", function(){ document.getElementById("injU").value = fmt(rv, st<1?1:0); document.getElementById("injU").focus(); });
-  sg.appendChild(l); sg.appendChild(use); box.appendChild(sg);
+  var rv = roundStep(val), st = state.settings.step, rvs = fmt(rv, st<1?1:0);
+  // Vorschlag automatisch (gerundet) ins Feld „Gespritzt“ – außer der Wert wurde dort von Hand geändert
+  if(!ui.injUDirty) injU.value = rv>0 ? rvs : "";
+  var info = el("div",{class:"suggest-info small"});
+  if(ui.injUDirty) info.appendChild(el("span",null,"„Gespritzt“ von Hand geändert"));
+  else info.appendChild(el("span",null, rv>0 ? "→ Gespritzt: "+rvs+" IE" : "→ kein Insulin"));
+  sg.appendChild(l); sg.appendChild(info); box.appendChild(sg);
   if(isFinite(r.bz) && r.bz < 70) box.appendChild(el("p",{class:"note",style:"color:var(--red)"},"BZ unter 70: erst die Unterzuckerung behandeln."));
 }
 
@@ -603,7 +609,7 @@ function injItem(x, withDate){
   var today = new Date(); var isToday = d.toDateString()===today.toDateString();
   var y = new Date(today.getTime()-86400000);
   var day = isToday ? "heute" : (d.toDateString()===y.toDateString() ? "gestern" : d.toLocaleDateString("de-DE",{weekday:"short",day:"numeric",month:"numeric"}));
-  m.appendChild(el("div",{class:"li-title num"}, (x.u>0?fmt(x.u)+" IE · ":"")+hhmm(d)+(x.ke>0?" · "+fmt(x.ke)+" KE":"")+(x.u>0?"":" · ohne Insulin")+(x.bz>0?" · BZ "+fmt(x.bz,0):"")));
+  m.appendChild(el("div",{class:"li-title num"}, (x.u>0?fmt(x.u)+" IE · ":"")+hhmm(d)+(x.ke>0?" · "+fmt(x.ke)+" KE":"")+(x.u>0?"":" · ohne Insulin")+(x.bz>0?" · BZ "+fmt(x.bz,0):"")+(x.pct?" · "+(x.pct>0?"+":"")+fmt(x.pct,0)+" %":"")));
   var act = x.u*activeFrac()((Date.now()-x.t)/60000);
   m.appendChild(el("div",{class:"small muted"}, day+(x.slot?", "+x.slot:"")+(act>0.005?", noch "+fmt(act)+" IE aktiv":"")));
   var edit = el("button",{class:"ghost",type:"button","aria-label":"Eintrag bearbeiten"},"Bearbeiten");
@@ -631,6 +637,7 @@ function editDlg(x){
     var t = f("eT","Uhrzeit", hhmm(dt), null, "time");
     var k = f("eK","Gegessen (KE)", x.ke>0?fmt(x.ke):"", "decimal");
     var b = f("eB","BZ (mg/dl) *", x.bz>0?fmt(x.bz,0):"", "numeric");
+    var pc = f("eP","Auf-/Abschlag (%)", x.pct?fmt(x.pct,0):"", "text");
     d.appendChild(actions("Speichern", function(){
       var nu = evalExpr(u.value); if(!isFinite(nu)||nu<0) nu=0;
       var nk = evalExpr(k.value); if(!isFinite(nk)||nk<0) nk=0;
@@ -643,6 +650,7 @@ function editDlg(x){
       rec.u = nu; rec.t = nd.getTime(); rec.up = Date.now();
       if(nk>0) rec.ke = Math.round(nk*100)/100; else delete rec.ke;
       rec.bz = Math.round(nb);
+      var np = evalExpr(String(pc.value).replace("+","")); if(isFinite(np) && np!==0) rec.pct = np; else delete rec.pct;
       state.injections.sort(function(a,c){return a.t-c.t;});
       persist("injections"); closeDlg(); renderAll(); toast("Eintrag geändert");
     }));
@@ -1113,7 +1121,7 @@ document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListe
 function resetEntry(){
   ["bz","ke","injU","injKe","injBz"].forEach(function(id){ var i=document.getElementById(id); i.value=""; i.classList.remove("missing"); });
   document.getElementById("keHint").textContent=""; ui.calcItems=[];
-  ui.injKeDirty=false; ui.injBzDirty=false; ui.slotManual=false;
+  ui.injKeDirty=false; ui.injBzDirty=false; ui.injUDirty=false; ui.slotManual=false;
   nowForInput(); renderSlots(); renderCalc();
 }
 document.getElementById("injCancel").addEventListener("click", function(){
@@ -1146,18 +1154,19 @@ function saveEntry(u, keEat, bzIn){
   var rec = {id:uidGen(), up:Date.now(), t:d.getTime(), u:u, slot: state.settings.slots[ui.slot] ? state.settings.slots[ui.slot].name : ""};
   if(keEat>0) rec.ke = Math.round(keEat*100)/100;
   if(bzIn>0) rec.bz = Math.round(bzIn);
+  var pctNow = num(state.settings.pct); if(isFinite(pctNow) && pctNow!==0 && u>0) rec.pct = pctNow;
   state.injections.push(rec);
   var cut = Date.now()-3*86400000;
   state.injections = state.injections.filter(function(x){return x.t>=cut;}).sort(function(a,b){return a.t-b.t;});
   persist("injections");
   document.getElementById("injU").value=""; nowForInput();
-  document.getElementById("injKe").value=""; document.getElementById("injBz").value=""; ui.injKeDirty=false; ui.injBzDirty=false;
+  document.getElementById("injKe").value=""; document.getElementById("injBz").value=""; ui.injKeDirty=false; ui.injBzDirty=false; ui.injUDirty=false;
   document.getElementById("bz").value=""; document.getElementById("ke").value=""; document.getElementById("keHint").textContent="";
   ui.basket=[]; renderBasket();
   ui.slotManual=false;
   renderAll(); toast((u>0?fmt(u)+" IE":fmt(keEat)+" KE")+" um "+hhmm(d)+" gespeichert");
 }
-document.getElementById("injU").addEventListener("input", function(e){ e.target.classList.remove("missing"); });
+document.getElementById("injU").addEventListener("input", function(e){ e.target.classList.remove("missing"); ui.injUDirty = e.target.value.trim()!==""; renderCalc(); });
 document.getElementById("foodSearch").addEventListener("input", renderFoods);
 document.getElementById("foodNew").addEventListener("click", function(){ foodDlg(null); });
 document.getElementById("basketClear").addEventListener("click", function(){ ui.basket=[]; renderBasket(); });
