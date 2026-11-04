@@ -55,6 +55,16 @@ p{margin:0 0 8px}
 .iob-unit{font-size:1rem;color:var(--muted);margin-left:4px;font-weight:400}
 .iob-cmp{font-size:.86rem;color:var(--muted);text-align:right;margin-top:4px}
 .iob-side{text-align:right}
+.iob-top > div:first-child{white-space:nowrap}
+.cgm{display:inline-flex;align-items:baseline;gap:6px;border:1px solid var(--line);border-radius:10px;padding:3px 10px;margin-bottom:6px;font-size:.92rem}
+.cgm b{font-size:1.15rem}
+.cgm-arrow{font-size:1.1rem;font-weight:700}
+.cgm-time{color:var(--muted);font-size:.8rem}
+.cgm.low{border-color:var(--red);background:var(--red-soft)} .cgm.low b{color:var(--red)}
+.cgm.high{border-color:var(--yellow);background:var(--yellow-soft)}
+.cgm.stale{opacity:.55}
+.cgm.err{border-color:var(--red)}
+.bzsrc{font-size:.78rem;color:var(--muted);min-height:1.1em;margin-top:2px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{font:inherit;font-size:.82rem;border:0;background:transparent;color:var(--muted);padding:6px 10px;min-height:34px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
@@ -174,6 +184,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="iob-top">
       <div><span class="iob-value num" id="iobNow">0,0</span><span class="iob-unit">IE aktiv</span></div>
       <div class="iob-side">
+        <div class="cgm hidden" id="cgm" role="status" aria-live="polite" title="Sensorwert"><b class="num" id="cgmVal">–</b><span class="cgm-arrow" id="cgmArrow"></span><span class="num cgm-time" id="cgmTime"></span></div>
         <div class="seg" role="group" aria-label="Rechenmodell"><button type="button" data-model="profile">Eigene</button><button type="button" data-model="juggluco">Fiasp</button><button type="button" data-model="exp">Standard</button></div>
         <div class="iob-cmp" id="iobCmp"></div>
       </div>
@@ -191,7 +202,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="block">
       <div class="slots" id="slots" role="group" aria-label="Tageszeit"></div>
       <div class="fields">
-        <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"></div>
+        <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"><div class="bzsrc" id="bzSrc"></div></div>
         <div><label for="ke">KE</label><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
           <div class="exprhint" id="keHint"></div></div>
         <div class="kerow">
@@ -328,6 +339,21 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 
   <!-- ZUGANG (private Daten, nicht Teil der Sicherung) -->
   <section id="view-key" class="hidden">
+    <div class="block" id="cgmBlock">
+      <h2 style="margin-top:0">Glukose-Sensor (REST-API)</h2>
+      <p class="muted small">Holt den aktuellen Sensorwert von deinem eigenen REST-Dienst und trägt ihn als BZ in den Rechner ein (überschreibbar, z. B. nach blutiger Messung). Nur auf diesem Gerät gespeichert, nicht Teil der Sicherung.</p>
+      <div style="margin-top:10px"><label for="cgmUrl">Geräte-URL der REST-API</label><input id="cgmUrl" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…onrender.com/…" style="font-size:1rem"></div>
+      <div class="fields" style="margin-top:10px">
+        <div><label for="cgmTimeout">Timeout (Sek.)</label><input id="cgmTimeout" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
+        <div><label for="cgmPoll">Polling-Intervall (Sek.)</label><input id="cgmPoll" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="primary" id="cgmSave" style="width:auto;flex:1">Speichern &amp; testen</button>
+        <button class="secondary" id="cgmNow">Jetzt abrufen</button>
+        <button class="ghost" id="cgmOff">Entfernen</button>
+      </div>
+      <p class="small" id="cgmStatus" style="margin-top:10px"></p>
+    </div>
     <div class="block" id="ghBlock">
       <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
       <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist – wie alles in diesem Bereich – nicht Teil der Sicherung.</p>
@@ -360,7 +386,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "13";
+var APP_VERSION = "14";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1107,9 +1133,100 @@ document.getElementById("ghOff").addEventListener("click", function(){
 });
 window.addEventListener("online", function(){ ghSync(); });
 
+// ---------- Glukose-Sensor (eigener REST-Dienst) ----------
+var CGM_KEY = "bolusrechner-cgm";
+var cgm = {url:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0};
+var cgmTimer = null, cgmBusy = false;
+var TREND = {doubleup:"⇈", singleup:"↑", fortyfiveup:"↗", flat:"→", fortyfivedown:"↘", singledown:"↓", doubledown:"⇊"};
+var CGM_STALE_MIN = 15;   // älter: grau anzeigen und nicht in den Rechner übernehmen
+function loadCgm(){ try{ var o = JSON.parse(localStorage.getItem(CGM_KEY)||"null"); if(o) for(var k in o) cgm[k]=o[k]; }catch(e){} }
+function saveCgm(){ try{ localStorage.setItem(CGM_KEY, JSON.stringify(cgm)); }catch(e){} }
+function cgmReady(){ return /^https?:\/\//i.test(cgm.url||""); }
+function cgmAgeMin(){ return cgm.last ? (Date.now()-cgm.last.time)/60000 : Infinity; }
+function cgmFresh(){ return cgm.last && cgmAgeMin() <= CGM_STALE_MIN; }
+async function fetchCgm(){
+  if(!cgmReady() || cgmBusy) return;
+  cgmBusy = true; renderCgm("busy");
+  var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, Math.max(5, +cgm.timeout||60)*1000);
+  try{
+    var res = await fetch(cgm.url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:{"Accept":"application/json"}});
+    if(!res.ok) throw new Error("Fehler "+res.status);
+    var j = await res.json();
+    var v = Number(j.value), t = Number(j.time);
+    if(j.success!==true || !isFinite(v) || v<20 || v>600 || !isFinite(t)) throw new Error("Antwort ungültig");
+    cgm.last = {value:Math.round(v), trend:String(j.trend||"").toLowerCase(), time:t};
+    cgm.lastError = ""; cgm.lastOk = Date.now(); saveCgm();
+    applyCgmToBz();
+  }catch(e){
+    cgm.lastError = (e && e.name==="AbortError") ? "Zeitüberschreitung ("+cgm.timeout+" s)" :
+      (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) ? e.message : "keine Verbindung (Internet oder CORS)";
+    saveCgm();
+  }finally{ clearTimeout(to); cgmBusy = false; renderCgm(); }
+}
+function applyCgmToBz(){
+  var i = document.getElementById("bz");
+  if(!cgmFresh() || ui.bzDirty) return;
+  if(i.value.trim() && !ui.bzFromCgm) return;
+  i.value = String(cgm.last.value); ui.bzFromCgm = true;
+  renderBzSrc(); renderCalc();
+}
+function renderBzSrc(){
+  var e = document.getElementById("bzSrc");
+  e.textContent = (ui.bzFromCgm && cgm.last) ? "vom Sensor, "+hhmm(new Date(cgm.last.time)) : "";
+}
+function renderCgm(mode){
+  var box = document.getElementById("cgm");
+  box.classList.toggle("hidden", !cgmReady());
+  var st = document.getElementById("cgmStatus");
+  if(!cgmReady()){ if(st) st.textContent = "Nicht eingerichtet."; return; }
+  var L = cgm.last;
+  document.getElementById("cgmVal").textContent = L ? String(L.value) : "–";
+  document.getElementById("cgmArrow").textContent = L ? (TREND[L.trend]||"?") : "";
+  document.getElementById("cgmTime").textContent = L ? hhmm(new Date(L.time)) : "";
+  box.classList.toggle("stale", !!L && !cgmFresh());
+  box.classList.toggle("low", !!L && cgmFresh() && L.value < 70);
+  box.classList.toggle("high", !!L && cgmFresh() && L.value > 180);
+  box.classList.toggle("err", !!cgm.lastError);
+  box.title = cgm.lastError ? "Sensor: "+cgm.lastError : "Sensorwert";
+  if(st){
+    st.style.color = cgm.lastError ? "var(--red)" : "";
+    st.textContent = mode==="busy" ? "Rufe ab …" :
+      cgm.lastError ? "Fehler: "+cgm.lastError+(L ? " – letzter Wert "+L.value+" mg/dl von "+hhmm(new Date(L.time)) : "") :
+      L ? "Letzter Wert: "+L.value+" mg/dl "+(TREND[L.trend]||"")+" von "+new Date(L.time).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(cgmFresh()?"":" (älter als "+CGM_STALE_MIN+" Min.)") : "Noch kein Wert abgerufen.";
+  }
+}
+function startCgmPolling(){
+  clearInterval(cgmTimer); cgmTimer = null;
+  if(!cgmReady()) return;
+  cgmTimer = setInterval(function(){ if(!document.hidden) fetchCgm(); }, Math.max(30, +cgm.poll||150)*1000);
+}
+function renderCgmForm(){
+  document.getElementById("cgmUrl").value = cgm.url||"";
+  document.getElementById("cgmTimeout").value = String(cgm.timeout||60);
+  document.getElementById("cgmPoll").value = String(cgm.poll||150);
+  renderCgm();
+}
+document.getElementById("cgmSave").addEventListener("click", function(){
+  var u = document.getElementById("cgmUrl").value.trim();
+  var to = num(document.getElementById("cgmTimeout").value), po = num(document.getElementById("cgmPoll").value);
+  if(!/^https:\/\//i.test(u)){ toast("Bitte eine https-Adresse eingeben"); return; }
+  if(!(to>=5 && to<=120)){ toast("Timeout: 5 bis 120 Sekunden"); return; }
+  if(!(po>=30 && po<=3600)){ toast("Polling: 30 bis 3600 Sekunden"); return; }
+  cgm.url = u; cgm.timeout = Math.round(to); cgm.poll = Math.round(po); cgm.lastError = ""; saveCgm();
+  startCgmPolling(); fetchCgm().then(function(){ toast(cgm.lastError ? "Abruf fehlgeschlagen" : "Sensor verbunden"); });
+});
+document.getElementById("cgmNow").addEventListener("click", function(){ if(!cgmReady()){ toast("Erst die URL eintragen"); return; } fetchCgm(); });
+document.getElementById("cgmOff").addEventListener("click", function(){
+  confirmDlg("Sensor-Anbindung entfernen?", "URL und letzter Wert werden von diesem Gerät gelöscht.", "Entfernen", function(){
+    clearInterval(cgmTimer); cgm = {url:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0}; saveCgm(); renderCgmForm(); toast("Entfernt");
+  });
+});
+document.getElementById("cgm").addEventListener("click", function(){ if(cgmReady()) fetchCgm(); });
+
 // ---------- Events ----------
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
-document.getElementById("bz").addEventListener("input", renderCalc);
+document.getElementById("bz").addEventListener("input", function(e){ ui.bzDirty = e.target.value.trim()!==""; ui.bzFromCgm = false; renderBzSrc(); renderCalc(); });
 document.getElementById("ke").addEventListener("input", renderCalc);
 document.getElementById("kePick").addEventListener("click", pickFoodDlg);
 document.getElementById("injKe").addEventListener("input", function(e){ ui.injKeDirty = e.target.value.trim()!==""; });
@@ -1121,8 +1238,8 @@ document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListe
 function resetEntry(){
   ["bz","ke","injU","injKe","injBz"].forEach(function(id){ var i=document.getElementById(id); i.value=""; i.classList.remove("missing"); });
   document.getElementById("keHint").textContent=""; ui.calcItems=[];
-  ui.injKeDirty=false; ui.injBzDirty=false; ui.injUDirty=false; ui.slotManual=false;
-  nowForInput(); renderSlots(); renderCalc();
+  ui.injKeDirty=false; ui.injBzDirty=false; ui.injUDirty=false; ui.slotManual=false; ui.bzDirty=false; ui.bzFromCgm=false;
+  nowForInput(); applyCgmToBz(); renderSlots(); renderCalc();
 }
 document.getElementById("injCancel").addEventListener("click", function(){
   var any = ["bz","ke","injU","injKe","injBz"].some(function(id){ return document.getElementById(id).value.trim(); });
@@ -1162,6 +1279,7 @@ function saveEntry(u, keEat, bzIn){
   document.getElementById("injU").value=""; nowForInput();
   document.getElementById("injKe").value=""; document.getElementById("injBz").value=""; ui.injKeDirty=false; ui.injBzDirty=false; ui.injUDirty=false;
   document.getElementById("bz").value=""; document.getElementById("ke").value=""; document.getElementById("keHint").textContent="";
+  ui.bzDirty=false; ui.bzFromCgm=false; applyCgmToBz();
   ui.basket=[]; renderBasket();
   ui.slotManual=false;
   renderAll(); toast((u>0?fmt(u)+" IE":fmt(keEat)+" KE")+" um "+hhmm(d)+" gespeichert");
@@ -1272,16 +1390,22 @@ function renderAll(){ renderBackup(); renderIOB(); renderSlots(); renderCalc(); 
 document.getElementById("appVersion").textContent = "v" + APP_VERSION;
 loadLocal();
 loadGh();
+loadCgm();
 ui.model = state.settings.model;
 nowForInput();
 renderRecipe();
 renderAll();
 renderGhForm();
+renderCgmForm();
+startCgmPolling();
+fetchCgm();
+setInterval(function(){ renderCgm(); }, 60000);   // Uhrzeit/Alter der Anzeige aktuell halten
 ghSync();
 setInterval(function(){ if(!document.hidden) ghSync(); }, 120000);
 if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1")){ navigator.serviceWorker.register("sw.js?v="+APP_VERSION).catch(function(){}); }
 setInterval(function(){ renderIOB(); renderRecent(); renderCalc(); if(!ui.slotManual) renderSlots(); }, 30000);
-document.addEventListener("visibilitychange", function(){ if(!document.hidden){ ghSync(); nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
+window.addEventListener("pageshow", function(e){ if(e.persisted) fetchCgm(); });
+document.addEventListener("visibilitychange", function(){ if(!document.hidden){ fetchCgm(); ghSync(); nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
 })();
 </script>
 </body>

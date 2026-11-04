@@ -29,6 +29,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
 - **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
+- **Glukose-Sensor** über eigenen REST-Dienst: Anzeige mit Trendpfeil, automatische Übernahme als BZ
 - **Sicherung** aller Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
 
 ## Synchronisation zwischen Geräten (GitHub)
@@ -105,6 +106,32 @@ Token auswählen → **Delete**. Danach auf den übrigen Geräten ggf. einen neu
 
 > Das App-Repository bleibt öffentlich, das Daten-Repository muss **privat** sein.
 > Die App warnt, wenn das Daten-Repository öffentlich ist.
+
+## Glukose-Sensor (eigener REST-Dienst)
+
+Optional kann die App den aktuellen Sensorwert (z. B. Dexcom G7) von einem **eigenen REST-Dienst**
+abrufen. Er erscheint oben im IOB-Kasten (Wert, Trendpfeil, Uhrzeit) und wird als BZ in den Rechner
+übernommen – überschreibbar, z. B. nach einer blutigen Messung.
+
+**Einrichtung:** Tab **Zugang** → *Glukose-Sensor (REST-API)* → URL, Timeout (Standard 60 s) und
+Polling-Intervall (Standard 150 s) → **Speichern & testen**. Diese Angaben bleiben nur auf dem Gerät.
+
+**Erwartete Antwort (JSON):**
+```json
+{ "success": true, "value": 112, "trend": "fortyfiveup", "time": 1792999887923 }
+```
+`time` in Millisekunden seit 1.1.1970; `trend`: `flat`, `singleup`, `doubleup`, `fortyfiveup`,
+`singledown`, `doubledown`, `fortyfivedown`.
+
+**Abruf:** beim Start, beim Zurückkehren in die App, im eingestellten Intervall und per Antippen der Anzeige.
+Werte älter als 15 Minuten werden grau dargestellt und nicht mehr in den Rechner übernommen.
+
+**Voraussetzungen auf Seite des Dienstes:**
+- erreichbar über **https**
+- **CORS** erlaubt: Antwort-Header `Access-Control-Allow-Origin: https://<benutzername>.github.io`
+  (oder `*`) – sonst blockiert der Browser die Antwort („keine Verbindung (Internet oder CORS)“).
+- Kostenlose render.com-Dienste schlafen nach Inaktivität ein; der erste Abruf kann bis zu einer
+  Minute dauern (daher der Timeout von 60 s).
 
 ## Dateien
 
