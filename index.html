@@ -347,6 +347,8 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><label for="cgmTimeout">Timeout (Sek.)</label><input id="cgmTimeout" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
         <div><label for="cgmPoll">Polling-Intervall (Sek.)</label><input id="cgmPoll" inputmode="numeric" autocomplete="off" style="font-size:1rem"></div>
       </div>
+      <div style="margin-top:10px"><label for="cgmKey">API-Schlüssel (optional)</label><input id="cgmKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="leer = ohne Schlüssel" style="font-size:1rem"></div>
+      <p class="muted small" style="margin-top:4px">Wird als Header <code>X-Api-Key</code> mitgeschickt. Leer lassen, wenn dein Dienst keinen Schlüssel verlangt.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="primary" id="cgmSave" style="width:auto;flex:1">Speichern &amp; testen</button>
         <button class="secondary" id="cgmNow">Jetzt abrufen</button>
@@ -386,7 +388,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "14";
+var APP_VERSION = "14.1";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1135,7 +1137,7 @@ window.addEventListener("online", function(){ ghSync(); });
 
 // ---------- Glukose-Sensor (eigener REST-Dienst) ----------
 var CGM_KEY = "bolusrechner-cgm";
-var cgm = {url:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0};
+var cgm = {url:"", key:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0};
 var cgmTimer = null, cgmBusy = false;
 var TREND = {doubleup:"⇈", singleup:"↑", fortyfiveup:"↗", flat:"→", fortyfivedown:"↘", singledown:"↓", doubledown:"⇊"};
 var CGM_STALE_MIN = 15;   // älter: grau anzeigen und nicht in den Rechner übernehmen
@@ -1150,7 +1152,10 @@ async function fetchCgm(){
   var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
   var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, Math.max(5, +cgm.timeout||60)*1000);
   try{
-    var res = await fetch(cgm.url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:{"Accept":"application/json"}});
+    var hdr = {"Accept":"application/json"};
+    if((cgm.key||"").trim()) hdr["X-Api-Key"] = cgm.key.trim();   // nur mitsenden, wenn eingetragen
+    var res = await fetch(cgm.url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:hdr});
+    if(res.status===401 || res.status===403) throw new Error("Schlüssel fehlt oder ist ungültig");
     if(!res.ok) throw new Error("Fehler "+res.status);
     var j = await res.json();
     var v = Number(j.value), t = Number(j.time);
@@ -1203,6 +1208,7 @@ function startCgmPolling(){
 }
 function renderCgmForm(){
   document.getElementById("cgmUrl").value = cgm.url||"";
+  document.getElementById("cgmKey").value = cgm.key||"";
   document.getElementById("cgmTimeout").value = String(cgm.timeout||60);
   document.getElementById("cgmPoll").value = String(cgm.poll||150);
   renderCgm();
@@ -1213,13 +1219,14 @@ document.getElementById("cgmSave").addEventListener("click", function(){
   if(!/^https:\/\//i.test(u)){ toast("Bitte eine https-Adresse eingeben"); return; }
   if(!(to>=5 && to<=120)){ toast("Timeout: 5 bis 120 Sekunden"); return; }
   if(!(po>=30 && po<=3600)){ toast("Polling: 30 bis 3600 Sekunden"); return; }
+  cgm.key = document.getElementById("cgmKey").value.trim();
   cgm.url = u; cgm.timeout = Math.round(to); cgm.poll = Math.round(po); cgm.lastError = ""; saveCgm();
   startCgmPolling(); fetchCgm().then(function(){ toast(cgm.lastError ? "Abruf fehlgeschlagen" : "Sensor verbunden"); });
 });
 document.getElementById("cgmNow").addEventListener("click", function(){ if(!cgmReady()){ toast("Erst die URL eintragen"); return; } fetchCgm(); });
 document.getElementById("cgmOff").addEventListener("click", function(){
-  confirmDlg("Sensor-Anbindung entfernen?", "URL und letzter Wert werden von diesem Gerät gelöscht.", "Entfernen", function(){
-    clearInterval(cgmTimer); cgm = {url:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0}; saveCgm(); renderCgmForm(); toast("Entfernt");
+  confirmDlg("Sensor-Anbindung entfernen?", "URL, API-Schlüssel und letzter Wert werden von diesem Gerät gelöscht.", "Entfernen", function(){
+    clearInterval(cgmTimer); cgm = {url:"", key:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0}; saveCgm(); renderCgmForm(); toast("Entfernt");
   });
 });
 document.getElementById("cgm").addEventListener("click", function(){ if(cgmReady()) fetchCgm(); });

@@ -113,8 +113,13 @@ Optional kann die App den aktuellen Sensorwert (z. B. Dexcom G7) von einem **eig
 abrufen. Er erscheint oben im IOB-Kasten (Wert, Trendpfeil, Uhrzeit) und wird als BZ in den Rechner
 übernommen – überschreibbar, z. B. nach einer blutigen Messung.
 
-**Einrichtung:** Tab **Zugang** → *Glukose-Sensor (REST-API)* → URL, Timeout (Standard 60 s) und
-Polling-Intervall (Standard 150 s) → **Speichern & testen**. Diese Angaben bleiben nur auf dem Gerät.
+**Einrichtung:** Tab **Zugang** → *Glukose-Sensor (REST-API)* → URL, Timeout (Standard 60 s),
+Polling-Intervall (Standard 150 s) und optional **API-Schlüssel** → **Speichern & testen**.
+Diese Angaben bleiben nur auf dem Gerät.
+
+**API-Schlüssel (optional):** Ist einer eingetragen, sendet die App ihn als Header `X-Api-Key`.
+Bleibt das Feld leer, wird kein Header gesendet. Der Dienst sollte dann `X-Api-Key` in
+`Access-Control-Allow-Headers` erlauben und Vorabanfragen (`OPTIONS`) mit 204 beantworten.
 
 **Erwartete Antwort (JSON):**
 ```json
