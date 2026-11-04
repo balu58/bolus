@@ -130,6 +130,10 @@ table.grid th{text-align:left;font-weight:400;color:var(--muted);font-size:.8rem
 table.grid td{padding:4px}
 table.grid input{font-size:1rem;padding:8px;min-height:40px}
 .scroll{overflow-x:auto}
+details.block summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:28px}
+details.block summary::-webkit-details-marker{display:none}
+details.block summary::after{content:"▸";color:var(--muted);transition:transform .15s}
+details.block[open] summary::after{transform:rotate(90deg)}
 .slotset{padding:10px 0;border-bottom:1px solid var(--line)}.slotset:last-child{border-bottom:0}
 .slotgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:4px}
 .slotgrid > div{min-width:0}
@@ -277,21 +281,9 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><label for="modelSel">IOB-Algorithmus</label><select id="modelSel"><option value="profile">Benutzerdefiniert (Messkurve)</option><option value="juggluco">Fiasp Formel (Juggluco)</option><option value="exp">Standardmodell (Loop/OpenAPS)</option></select></div>
         <div><label for="stepSel">Kleinste Einheit Pen</label><select id="stepSel"><option value="0.1">0,1 IE</option><option value="0.5">0,5 IE</option><option value="1">1 IE</option></select></div>
       </div>
-      <p class="muted small" style="margin-top:8px">Das Modell kannst du oben jederzeit umschalten, beim nächsten Öffnen gilt wieder der Standard. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
+      <p class="muted small" style="margin-top:8px">Darunter erscheinen die Einstellungen des gewählten Algorithmus. Oben im IOB-Kasten kannst du jederzeit zum Vergleich umschalten, beim nächsten Öffnen gilt wieder diese Auswahl. „Übernehmen“ rundet auf die kleinste Einheit, angezeigt wird weiter auf 0,1 genau.</p>
     </div>
-    <div class="block">
-      <h2 style="margin-top:0">Standardmodell (Loop/OpenAPS)</h2>
-      <p class="muted small">Beschreibt schnell wirksame Insuline über Wirkmaximum und Wirkdauer – ohne eigene Messreihe. Werte vor der Nutzung mit dem Diabetes-Team abstimmen.</p>
-      <div style="margin-top:8px"><label for="expPreset">Vorlage</label><select id="expPreset" style="font-size:1rem"></select></div>
-      <div class="fields" style="margin-top:10px">
-        <div><label for="expPeak">Wirkmaximum (Min.)</label><input id="expPeak" inputmode="numeric" autocomplete="off"></div>
-        <div><label for="expDur">Wirkdauer (Min.)</label><input id="expDur" inputmode="numeric" autocomplete="off"></div>
-      </div>
-      <p class="small" id="expMsg" style="margin-top:6px"></p>
-      <h2 style="margin:14px 0 6px;font-size:.95rem">Vergleich: noch aktiver Anteil</h2>
-      <div class="scroll"><table class="grid" id="cmpTable"><thead><tr><th>Minute</th><th>Eigene</th><th>Fiasp</th><th>Standard</th></tr></thead><tbody></tbody></table></div>
-    </div>
-    <div class="block">
+    <div class="block algo" id="algoProfile">
       <h2 style="margin-top:0">Benutzerdefinierte Wirkkurve</h2>
       <p class="muted small">Gemessene Werte des aktiven Insulins nach einem einzelnen Bolus. Dazwischen wird linear interpoliert, ab dem letzten Punkt ist das aktive Insulin 0.</p>
       <div style="max-width:200px"><label for="refBolus">Bolus der Messreihe (IE)</label><input id="refBolus" inputmode="decimal" autocomplete="off"></div>
@@ -301,6 +293,27 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       </table></div>
       <button class="ghost" id="profAdd">Punkt hinzufügen</button>
     </div>
+    <div class="block algo" id="algoJ">
+      <h2 style="margin-top:0">Fiasp Formel (Juggluco)</h2>
+      <p class="muted small">Fest hinterlegte, veröffentlichte Formel für Fiasp (Quelle: juggluco.nl). Hier gibt es nichts einzustellen.</p>
+      <p class="num" style="font-size:.9rem;overflow-wrap:anywhere;margin-top:8px">IOB(t) = Bolus × (5,7952 · e<sup>−0,016029·t</sup> − 4,7952 · e<sup>−0,019372·t</sup>)</p>
+      <p class="muted small">t in Minuten. Die Kurve läuft rund 7–8 Stunden aus.</p>
+    </div>
+    <div class="block algo" id="algoExp">
+      <h2 style="margin-top:0">Standardmodell (Loop/OpenAPS)</h2>
+      <p class="muted small">Beschreibt schnell wirksame Insuline über Wirkmaximum und Wirkdauer – ohne eigene Messreihe. Werte vor der Nutzung mit dem Diabetes-Team abstimmen.</p>
+      <div style="margin-top:8px"><label for="expPreset">Vorlage</label><select id="expPreset" style="font-size:1rem"></select></div>
+      <div class="fields" style="margin-top:10px">
+        <div><label for="expPeak">Wirkmaximum (Min.)</label><input id="expPeak" inputmode="numeric" autocomplete="off"></div>
+        <div><label for="expDur">Wirkdauer (Min.)</label><input id="expDur" inputmode="numeric" autocomplete="off"></div>
+      </div>
+      <p class="small" id="expMsg" style="margin-top:6px"></p>
+    </div>
+    <details class="block" id="cmpBlock">
+      <summary><b>Vergleich: noch aktiver Anteil</b></summary>
+      <p class="muted small" style="margin-top:8px">Anteil des Bolus, der nach der angegebenen Zeit noch aktiv ist – für alle drei Modelle mit ihren aktuellen Einstellungen.</p>
+      <div class="scroll"><table class="grid" id="cmpTable"><thead><tr><th>Minute</th><th>Eigene</th><th>Fiasp</th><th>Standard</th></tr></thead><tbody></tbody></table></div>
+    </details>
     <div class="block">
       <h2 style="margin-top:0">Sicherung</h2>
       <p class="muted small">„Jetzt sichern“ öffnet das Teilen-Menü. Dort OneDrive oder „In Dateien sichern“ wählen.</p>
@@ -346,7 +359,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "12.1";
+var APP_VERSION = "12.2";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -759,6 +772,7 @@ function renderSettings(){
   renderPct();
   var rb = document.getElementById("refBolus"); rb.value = fmt(S.refBolus,1);
   document.getElementById("modelSel").value = S.model;
+  renderAlgo();
   renderExp();
   document.getElementById("stepSel").value = String(S.step);
   var pt = document.querySelector("#profTable tbody"); pt.innerHTML="";
@@ -1172,6 +1186,13 @@ document.getElementById("pct").addEventListener("change", renderPct);
 document.getElementById("pctMinus").addEventListener("click", function(){ setPct((num(state.settings.pct)||0)-5); });
 document.getElementById("pctPlus").addEventListener("click", function(){ setPct((num(state.settings.pct)||0)+5); });
 document.getElementById("refBolus").addEventListener("change", function(e){ var v=num(e.target.value); if(v>0){ state.settings.refBolus=v; persist("settings"); renderSettings(); renderIOB(); renderCalc(); } else { e.target.value=fmt(state.settings.refBolus,1); toast("Bitte eine Zahl größer 0 eingeben"); } });
+// nur die Einstellungen des gewählten IOB-Algorithmus anzeigen
+function renderAlgo(){
+  var m = state.settings.model;
+  document.getElementById("algoProfile").classList.toggle("hidden", m!=="profile");
+  document.getElementById("algoJ").classList.toggle("hidden", m!=="juggluco");
+  document.getElementById("algoExp").classList.toggle("hidden", m!=="exp");
+}
 function renderExp(){
   var S = state.settings, e = S.exp, sel = document.getElementById("expPreset");
   if(!sel.options.length) Object.keys(EXP_PRESETS).forEach(function(k){ sel.appendChild(el("option",{value:k}, EXP_PRESETS[k].label)); });
@@ -1209,7 +1230,7 @@ document.getElementById("expPreset").addEventListener("change", function(e){
     if(!applyExp(pk, du, preset)){ /* ungültig: Felder bleiben zur Korrektur stehen */ }
   });
 });
-document.getElementById("modelSel").addEventListener("change", function(e){ state.settings.model = e.target.value; ui.model = e.target.value; persist("settings"); renderIOB(); renderCalc(); renderRecent(); renderLog(); });
+document.getElementById("modelSel").addEventListener("change", function(e){ state.settings.model = e.target.value; ui.model = e.target.value; persist("settings"); renderAlgo(); renderIOB(); renderCalc(); renderRecent(); renderLog(); });
 document.getElementById("stepSel").addEventListener("change", function(e){ state.settings.step = +e.target.value; persist("settings"); renderCalc(); });
 document.querySelectorAll(".seg button").forEach(function(b){ b.addEventListener("click", function(){ ui.model = b.dataset.model; renderIOB(); renderCalc(); renderRecent(); renderLog(); }); });
 document.getElementById("profAdd").addEventListener("click", function(){
