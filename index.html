@@ -394,7 +394,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "14.3";
+var APP_VERSION = "14.4";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1175,29 +1175,40 @@ function saveCgm(){ try{ localStorage.setItem(CGM_KEY, JSON.stringify(cgm)); }ca
 function cgmReady(){ return /^https?:\/\//i.test(cgm.url||""); }
 function cgmAgeMin(){ return cgm.last ? (Date.now()-cgm.last.time)/60000 : Infinity; }
 function cgmFresh(){ return cgm.last && cgmAgeMin() <= CGM_STALE_MIN; }
-async function fetchCgm(){
-  if(!cgmReady() || cgmBusy) return;
+var cgmGen = 0, cgmCtrl = null;
+// force = true: laufenden Abruf abbrechen und mit den aktuellen Einstellungen neu starten
+async function fetchCgm(force){
+  if(!cgmReady()) return;
+  if(cgmBusy && !force) return;
+  if(cgmBusy && cgmCtrl) cgmCtrl.abort();
+  var gen = ++cgmGen;
   cgmBusy = true; renderCgm("busy");
-  var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+  var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null; cgmCtrl = ctrl;
   var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, Math.max(5, +cgm.timeout||60)*1000);
+  var url = cgm.url, k = cleanSecret(cgm.key);
   try{
     var hdr = {"Accept":"application/json"};
-    var k = cleanSecret(cgm.key);
     if(k) hdr["X-Api-Key"] = k;   // nur mitsenden, wenn eingetragen
-    var res = await fetch(cgm.url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:hdr});
+    var res = await fetch(url, {cache:"no-store", signal: ctrl ? ctrl.signal : undefined, headers:hdr});
+    if(gen!==cgmGen) return;      // inzwischen durch neueren Abruf ersetzt – Ergebnis verwerfen
     if(res.status===401 || res.status===403) throw new Error(k ? "Schlüssel ungültig (gesendet: "+secretSummary(k)+")" : "Schlüssel fehlt – im Feld „API-Schlüssel“ ist nichts gespeichert");
     if(!res.ok) throw new Error("Fehler "+res.status);
     var j = await res.json();
+    if(gen!==cgmGen) return;
     var v = Number(j.value), t = Number(j.time);
     if(j.success!==true || !isFinite(v) || v<20 || v>600 || !isFinite(t)) throw new Error("Antwort ungültig");
     cgm.last = {value:Math.round(v), trend:String(j.trend||"").toLowerCase(), time:t};
     cgm.lastError = ""; cgm.lastOk = Date.now(); saveCgm();
     applyCgmToBz();
   }catch(e){
+    if(gen!==cgmGen) return;
     cgm.lastError = (e && e.name==="AbortError") ? "Zeitüberschreitung ("+cgm.timeout+" s)" :
       (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) ? e.message : "keine Verbindung (Internet oder CORS)";
     saveCgm();
-  }finally{ clearTimeout(to); cgmBusy = false; renderCgm(); }
+  }finally{
+    clearTimeout(to);
+    if(gen===cgmGen){ cgmBusy = false; cgmCtrl = null; renderCgm(); }
+  }
 }
 function applyCgmToBz(){
   var i = document.getElementById("bz");
@@ -1244,24 +1255,34 @@ function renderCgmForm(){
   document.getElementById("cgmPoll").value = String(cgm.poll||150);
   renderCgm();
 }
-document.getElementById("cgmSave").addEventListener("click", function(){
+function cgmFormError(msg){ var st=document.getElementById("cgmStatus"); st.style.color="var(--red)"; st.textContent="Nicht gespeichert: "+msg; toast(msg); }
+// übernimmt die Werte aus dem Formular; true = gespeichert
+function saveCgmForm(){
   var u = document.getElementById("cgmUrl").value.trim();
   var to = num(document.getElementById("cgmTimeout").value), po = num(document.getElementById("cgmPoll").value);
-  if(!/^https:\/\//i.test(u)){ toast("Bitte eine https-Adresse eingeben"); return; }
-  if(!(to>=5 && to<=120)){ toast("Timeout: 5 bis 120 Sekunden"); return; }
-  if(!(po>=30 && po<=3600)){ toast("Polling: 30 bis 3600 Sekunden"); return; }
-  cgm.key = cleanSecret(document.getElementById("cgmKey").value);
-  if(/^(github_pat_|ghp_)/.test(cgm.key)){ toast("Das ist ein GitHub-Token, kein API-Schlüssel"); return; }
-  cgm.url = u; cgm.timeout = Math.round(to); cgm.poll = Math.round(po); cgm.lastError = ""; saveCgm();
-  startCgmPolling(); fetchCgm().then(function(){ toast(cgm.lastError ? "Abruf fehlgeschlagen" : "Sensor verbunden"); });
+  var key = cleanSecret(document.getElementById("cgmKey").value);
+  if(!/^https:\/\//i.test(u)){ cgmFormError("Bitte eine https-Adresse eingeben"); return false; }
+  if(!(to>=5 && to<=120)){ cgmFormError("Timeout: 5 bis 120 Sekunden"); return false; }
+  if(!(po>=30 && po<=3600)){ cgmFormError("Polling: 30 bis 3600 Sekunden"); return false; }
+  if(/^(github_pat_|ghp_)/.test(key)){ cgmFormError("Das ist ein GitHub-Token, kein API-Schlüssel"); return false; }
+  cgm.url = u; cgm.key = key; cgm.timeout = Math.round(to); cgm.poll = Math.round(po); cgm.lastError = ""; saveCgm();
+  renderSecretInfo("cgmKey","cgm");
+  return true;
+}
+document.getElementById("cgmSave").addEventListener("click", function(){
+  if(!saveCgmForm()) return;
+  startCgmPolling(); fetchCgm(true).then(function(){ toast(cgm.lastError ? "Abruf fehlgeschlagen" : "Sensor verbunden"); });
 });
-document.getElementById("cgmNow").addEventListener("click", function(){ if(!cgmReady()){ toast("Erst die URL eintragen"); return; } fetchCgm(); });
+document.getElementById("cgmNow").addEventListener("click", function(){
+  if(!saveCgmForm()) return;   // auch hier die aktuellen Feldwerte verwenden
+  fetchCgm(true);
+});
 document.getElementById("cgmOff").addEventListener("click", function(){
   confirmDlg("Sensor-Anbindung entfernen?", "URL, API-Schlüssel und letzter Wert werden von diesem Gerät gelöscht.", "Entfernen", function(){
     clearInterval(cgmTimer); cgm = {url:"", key:"", timeout:60, poll:150, last:null, lastError:"", lastOk:0}; saveCgm(); renderCgmForm(); toast("Entfernt");
   });
 });
-document.getElementById("cgm").addEventListener("click", function(){ if(cgmReady()) fetchCgm(); });
+document.getElementById("cgm").addEventListener("click", function(){ if(cgmReady()) fetchCgm(true); });
 
 // ---------- Events ----------
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
