@@ -9,7 +9,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 
 | Rechner | Essen | Verlauf | Einstellungen |
 |:---:|:---:|:---:|:---:|
-| <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Injektionen der letzten 3 Tage"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Insulin/Kohlenhydrat-Verhältnisse und Einstellungen"> |
+| <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Verlauf der Injektionen"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Insulin/Kohlenhydrat-Verhältnisse und Einstellungen"> |
 
 *Beispieldaten: 7,5 IE um 11:02, Abfrage um 12:40, BZ 172, KE als Formel `4,2*0,88`.*
 
@@ -28,6 +28,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 - **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
+- **Verlauf** mit einstellbarer Aufbewahrung (Einstellungen → Verlauf, Standard 3 Tage, bis 365)
 - **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
 - **Glukose-Sensor** über eigenen REST-Dienst: Anzeige mit Trendpfeil, automatische Übernahme als BZ
 - **Sicherung** aller Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
@@ -95,6 +96,8 @@ Profilbild → Settings → Developer settings → Personal access tokens → Fi
 Token auswählen → **Delete**. Danach auf den übrigen Geräten ggf. einen neuen Token eintragen.
 
 ### So wird abgeglichen
+
+- Solange der Abgleich funktioniert, entfällt die Erinnerung an die manuelle Sicherung.
 
 - Beim Start, beim Zurückkehren in die App, nach jeder Änderung und alle 2 Minuten.
 - **Injektionen** werden zusammengeführt; gelöschte Einträge werden auf allen Geräten gelöscht.

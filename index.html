@@ -279,7 +279,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
   <!-- VERLAUF -->
   <section id="view-log" class="hidden">
     <div class="block">
-      <h2 style="margin-top:0">Injektionen der letzten 3 Tage</h2>
+      <h2 style="margin-top:0" id="logTitle">Injektionen der letzten 3 Tage</h2>
       <ul class="list" id="log"></ul>
     </div>
   </section>
@@ -332,6 +332,11 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <p class="muted small" style="margin-top:8px">Anteil des Bolus, der nach der angegebenen Zeit noch aktiv ist – für alle drei Modelle mit ihren aktuellen Einstellungen.</p>
       <div class="scroll"><table class="grid" id="cmpTable"><thead><tr><th>Minute</th><th>Eigene</th><th>Fiasp</th><th>Standard</th></tr></thead><tbody></tbody></table></div>
     </details>
+    <div class="block">
+      <h2 style="margin-top:0">Verlauf</h2>
+      <div style="max-width:220px"><label for="keepDays">Aufbewahren (Tage)</label><input id="keepDays" inputmode="numeric" autocomplete="off"></div>
+      <p class="muted small" style="margin-top:6px">Ältere Einträge werden beim nächsten Speichern bzw. Abgleich entfernt (1–365 Tage). Gilt auf allen synchronisierten Geräten.</p>
+    </div>
     <div class="block">
       <h2 style="margin-top:0">Sicherung</h2>
       <p class="muted small">„Jetzt sichern“ öffnet das Teilen-Menü. Dort OneDrive oder „In Dateien sichern“ wählen.</p>
@@ -394,7 +399,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "14.4";
+var APP_VERSION = "15";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -409,6 +414,7 @@ var DEFAULT_SETTINGS = {
   profile:[[0,11.5],[15,11.2],[30,10.6],[45,9.9],[60,8.8],[75,7.6],[90,6.3],[105,5.1],[120,3.8],[135,2.9],[150,2.1],[165,1.5],[180,1],[195,0.7],[210,0.4],[225,0.2],[240,0]],
   model:"profile",
   step:0.5,
+  keepDays:3,
   exp:{preset:"ultra", peak:55, dur:360}
 };
 // Vorlagen für das Standardmodell (Loop/OpenAPS): Wirkmaximum und Wirkdauer in Minuten
@@ -452,6 +458,7 @@ function fixSettings(x){
   if(!MODEL_NAMES[x.model]) x.model = "profile";   // fehlende oder alte Bezeichnungen umstellen
   if(!x.exp || !(x.exp.peak>0) || !(x.exp.dur>0) || x.exp.peak >= x.exp.dur/2) x.exp = clone(DEFAULT_SETTINGS.exp);
   if(!(x.step>0)) x.step = 0.5;
+  if(!(x.keepDays>=1 && x.keepDays<=365)) x.keepDays = 3;
   if(!x.slots || !x.slots.length) x.slots = clone(DEFAULT_SETTINGS.slots);
   delete x.cmpJuggluco;
   return x;
@@ -698,6 +705,8 @@ function renderRecent(){
   list.forEach(function(x){ ul.appendChild(injItem(x)); });
 }
 function renderLog(){
+  var kd = state.settings.keepDays||3;
+  document.getElementById("logTitle").textContent = kd===1 ? "Injektionen des letzten Tages" : "Injektionen der letzten "+kd+" Tage";
   var ul = document.getElementById("log"); ul.innerHTML="";
   var list = state.injections.slice().sort(function(a,b){return b.t-a.t;});
   if(!list.length){ ul.appendChild(el("li",{class:"muted"},"Noch keine Injektionen gespeichert.")); return; }
@@ -814,6 +823,7 @@ function renderSettings(){
   renderPct();
   var rb = document.getElementById("refBolus"); rb.value = fmt(S.refBolus,1);
   document.getElementById("modelSel").value = S.model;
+  if(document.activeElement!==document.getElementById("keepDays")) document.getElementById("keepDays").value = String(S.keepDays||3);
   renderAlgo();
   renderExp();
   document.getElementById("stepSel").value = String(S.step);
@@ -958,11 +968,13 @@ function foodDlg(f){
 var BK_KEY = "bolusrechner-lastbackup";
 function lastBackup(){ try{ return +localStorage.getItem(BK_KEY) || 0; }catch(e){ return 0; } }
 function markBackup(){ try{ localStorage.setItem(BK_KEY, String(Date.now())); }catch(e){} renderBackup(); }
+function keepMs(st){ var d = (st||state.settings||{}).keepDays; return ((d>=1 && d<=365) ? d : 3)*86400000; }
 function renderBackup(){
   var lb = lastBackup(), days = lb ? Math.floor((Date.now()-lb)/86400000) : null;
   var info = document.getElementById("backupInfo");
   info.textContent = lb ? "Letzte Sicherung: "+new Date(lb).toLocaleDateString("de-DE")+(days?" (vor "+days+(days===1?" Tag)":" Tagen)"):" (heute)") : "Noch keine Sicherung. Sichere deine Daten z. B. in OneDrive.";
-  var due = (!lb || days>=7) && state.injections.length>0;
+  var syncOk = ghReady() && gh.lastSync && !gh.lastError && (Date.now()-gh.lastSync) < 7*86400000;   // funktionierender Sync ersetzt die Erinnerung
+  var due = (!lb || days>=7) && state.injections.length>0 && !syncOk;
   document.getElementById("backupBanner").classList.toggle("hidden", !due);
   document.getElementById("backupBannerText").textContent = lb ? "Letzte Sicherung vor "+days+" Tagen." : "Deine Daten sind noch nicht gesichert.";
 }
@@ -1036,8 +1048,7 @@ function stable(o){ if(Array.isArray(o)) return "["+o.map(stable).join(",")+"]";
 function snapshot(){ return {settings:state.settings, foods:state.foods, injections:state.injections, meta:state.meta||{settingsAt:0,foodsAt:0}, deleted:state.deleted||{}}; }
 function mergeData(L, Rm){
   L = clone(L);
-  if(!Rm) return L;
-  Rm = clone(Rm);
+  Rm = Rm ? clone(Rm) : {};   // auch ohne Gegenstück: Aufbewahrungsdauer anwenden
   var lm = L.meta||{}, rm = Rm.meta||{};
   var out = {meta:{}};
   if((rm.settingsAt||0) > (lm.settingsAt||0) && Rm.settings){ out.settings = fixSettings(Rm.settings); out.meta.settingsAt = rm.settingsAt; } else { out.settings = L.settings; out.meta.settingsAt = lm.settingsAt||0; }
@@ -1045,7 +1056,7 @@ function mergeData(L, Rm){
   var del = {}, cut = Date.now()-7*86400000;
   [L.deleted||{}, Rm.deleted||{}].forEach(function(d){ for(var k in d){ if(d[k]>=cut && (!del[k] || d[k]>del[k])) del[k]=d[k]; } });
   out.deleted = del;
-  var map = {}, icut = Date.now()-3*86400000;
+  var map = {}, icut = Date.now()-keepMs(out.settings);
   (Rm.injections||[]).concat(L.injections||[]).forEach(function(x){
     if(!x || !x.id || del[x.id] || x.t<icut) return;
     var o = map[x.id];
@@ -1085,11 +1096,11 @@ async function ghSync(){
       if(!put.ok){ throw new Error(ghErrText(put.status)); }
       break;
     }
-    gh.lastSync = Date.now(); gh.lastError = ""; saveGh();
+    gh.lastSync = Date.now(); gh.lastError = ""; saveGh(); renderBackup();
   }catch(e){
     gh.lastError = (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) ? e.message : "keine Verbindung zu GitHub"; saveGh();
   }finally{
-    ghBusy = false; renderSyncStatus();
+    ghBusy = false; renderSyncStatus(); renderBackup();
     if(ghAgain){ ghAgain=false; setTimeout(ghSync, 500); }
   }
 }
@@ -1333,7 +1344,7 @@ function saveEntry(u, keEat, bzIn){
   if(bzIn>0) rec.bz = Math.round(bzIn);
   var pctNow = num(state.settings.pct); if(isFinite(pctNow) && pctNow!==0 && u>0) rec.pct = pctNow;
   state.injections.push(rec);
-  var cut = Date.now()-3*86400000;
+  var cut = Date.now()-keepMs();
   state.injections = state.injections.filter(function(x){return x.t>=cut;}).sort(function(a,b){return a.t-b.t;});
   persist("injections");
   document.getElementById("injU").value=""; nowForInput();
@@ -1416,6 +1427,18 @@ document.getElementById("expPreset").addEventListener("change", function(e){
     if(preset!=="custom" && (pk!==EXP_PRESETS[preset].peak)) preset = "custom";
     if(!applyExp(pk, du, preset)){ /* ungültig: Felder bleiben zur Korrektur stehen */ }
   });
+});
+document.getElementById("keepDays").addEventListener("change", function(e){
+  var v = Math.round(num(e.target.value));
+  if(!(v>=1 && v<=365)){ toast("Bitte 1 bis 365 Tage eingeben"); e.target.value = String(state.settings.keepDays||3); return; }
+  var old = state.settings.keepDays||3;
+  function apply(){ state.settings.keepDays = v; document.getElementById("keepDays").value = String(v); persist("settings"); renderLog(); toast("Verlauf: "+v+" Tage"); }
+  if(v < old && state.injections.some(function(x){ return x.t < Date.now()-v*86400000; })){
+    confirmDlg("Ältere Einträge entfernen?", "Einträge, die älter als "+v+" Tage sind, werden beim nächsten Speichern bzw. Abgleich gelöscht – auf allen synchronisierten Geräten.", "Übernehmen", apply);
+    e.target.value = String(old);
+    return;
+  }
+  apply();
 });
 document.getElementById("modelSel").addEventListener("change", function(e){ state.settings.model = e.target.value; ui.model = e.target.value; persist("settings"); renderAlgo(); renderIOB(); renderCalc(); renderRecent(); renderLog(); });
 document.getElementById("stepSel").addEventListener("change", function(e){ state.settings.step = +e.target.value; persist("settings"); renderCalc(); });
