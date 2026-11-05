@@ -399,12 +399,12 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "15";
+var APP_VERSION = "15.1";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
-    {name:"Früh",       from:"04:00", ziel:120, korr:50, ke:1.5},
-    {name:"Mittag",     from:"10:30", ziel:120, korr:50, ke:1.2},
+    {name:"Früh",       from:"04:00", ziel:120, korr:40, ke:1.5},
+    {name:"Mittag",     from:"10:30", ziel:120, korr:40, ke:1.2},
     {name:"Nachmittag", from:"14:30", ziel:120, korr:40, ke:1.5},
     {name:"Abend",      from:"18:00", ziel:120, korr:40, ke:2.5},
     {name:"Nacht",      from:"22:00", ziel:120, korr:40, ke:2.5}
@@ -427,19 +427,13 @@ var MODEL_NAMES = {profile:"Eigene", juggluco:"Fiasp", exp:"Standard"};
 var DEFAULT_FOODS = [
   {id:"f1", name:"Banane", unit:"100g", ke:1.8},
   {id:"f2", name:"Johannisbeeren", unit:"100g", ke:0.8},
-  {id:"f3", name:"Mirabellen", unit:"100g", ke:1.15, check:true},
-  {id:"f4", name:"Erdbeeren", unit:"100g", ke:0.5, check:true},
-  {id:"f5", name:"Süßkartoffel", unit:"100g", ke:2.5, check:true},
-  {id:"f6", name:"Kartoffeln roh geschält", unit:"100g", ke:1.9, check:true},
-  {id:"f7", name:"Brot Kamut", unit:"100g", ke:3.98},
-  {id:"f8", name:"Brot Lupine", unit:"100g", ke:4.18},
-  {id:"f9", name:"Traubenzucker", unit:"Stück", ke:0.196, check:true, note:"aus 46 Stück = 9 KE"},
-  {id:"f10", name:"Gummibärchen", unit:"Stück", ke:0.143, note:"7 Stück = 1 KE"},
-  {id:"f11", name:"Spanische Apfeltarte", unit:"Stück", ke:2.19, note:"35 KE ÷ 16 Stück"},
-  {id:"f12", name:"Muffins", unit:"Stück", ke:1.75, note:"35 KE ÷ 20 Stück"},
-  {id:"f13", name:"Dr. Oetker Pizza 320 g + Mais", unit:"Portion", ke:4.63, note:"18,5 KE ÷ 4 Portionen"},
-  {id:"f14", name:"Döner", unit:"Stück", ke:6, check:true, note:"in der Tabelle 2,5 und 6 KE"},
-  {id:"f15", name:"Pizza 24 cm", unit:"Stück", ke:7.5, check:true}
+  {id:"f3", name:"Mirabellen", unit:"100g", ke:1.15},
+  {id:"f4", name:"Erdbeeren", unit:"100g", ke:0.5},
+  {id:"f5", name:"Süßkartoffel", unit:"100g", ke:2.4, },
+  {id:"f6", name:"Kartoffeln roh geschält", unit:"100g", ke:2 },
+  {id:"f7", name:"Brot Kamut", unit:"100g", ke:4},
+  {id:"f14", name:"Döner", unit:"Stück", ke:6.5},
+  {id:"f15", name:"Pizza 24 cm", unit:"Stück", ke:7.5}
 ];
 
 // ---------- State ----------
