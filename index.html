@@ -225,10 +225,10 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     <div class="block">
       <h2 style="margin-top:0">Injektion und Mahlzeit speichern</h2>
       <div class="inj-form">
+        <div><label for="injBz">BZ (mg/dl) *</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="Pflichtfeld" required></div>
+        <div><label for="injKe">Gegessen (KE)</label><input id="injKe" inputmode="decimal" autocomplete="off" placeholder="0"></div>
         <div><label for="injU">Gespritzt (IE)</label><input id="injU" inputmode="decimal" autocomplete="off"></div>
         <div><label for="injT">Uhrzeit</label><input id="injT" type="time"></div>
-        <div><label for="injKe">Gegessen (KE)</label><input id="injKe" inputmode="decimal" autocomplete="off" placeholder="0"></div>
-        <div><label for="injBz">BZ (mg/dl) *</label><input id="injBz" inputmode="numeric" autocomplete="off" placeholder="Pflichtfeld" required></div>
         <div class="inj-actions"><button class="secondary" id="injCancel" type="button">Abbrechen</button><button class="primary" id="injSave">Speichern</button></div>
       </div>
       <p class="note">Liegt die Uhrzeit mehr als 5 Minuten in der Zukunft, wird sie als gestern gespeichert (z. B. 23:50 um 0:30).</p>
@@ -399,7 +399,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "15.1";
+var APP_VERSION = "15.3";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
