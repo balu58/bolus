@@ -403,7 +403,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "15.4";
+var APP_VERSION = "15.5";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1221,14 +1221,21 @@ async function fetchCgm(force){
 }
 function applyCgmToBz(){
   var i = document.getElementById("bz");
-  if(!cgmFresh() || ui.bzDirty) return;
+  if(!cgmFresh() || ui.bzDirty) { renderBzSrc(); return; }
+  if(document.activeElement === i) return;          // nie überschreiben, während das Feld bearbeitet wird
   if(i.value.trim() && !ui.bzFromCgm) return;
   i.value = String(cgm.last.value); ui.bzFromCgm = true;
   renderBzSrc(); renderCalc();
 }
 function renderBzSrc(){
-  var e = document.getElementById("bzSrc");
-  e.textContent = (ui.bzFromCgm && cgm.last) ? "vom Sensor, "+hhmm(new Date(cgm.last.time)) : "";
+  var e = document.getElementById("bzSrc"); e.innerHTML = "";
+  if(ui.bzFromCgm && cgm.last){ e.textContent = "vom Sensor, "+hhmm(new Date(cgm.last.time)); return; }
+  // eigener Wert eingetragen: aktuellen Sensorwert zum Übernehmen anbieten
+  if(ui.bzDirty && cgmFresh() && String(cgm.last.value) !== document.getElementById("bz").value.trim()){
+    var b = el("button",{type:"button",class:"linkbtn"}, "Sensor "+cgm.last.value+" übernehmen");
+    b.addEventListener("click", function(){ ui.bzDirty = false; ui.bzFromCgm = false; document.getElementById("bz").value = ""; applyCgmToBz(); });
+    e.appendChild(b);
+  }
 }
 function renderCgm(mode){
   var box = document.getElementById("cgm");
@@ -1295,7 +1302,8 @@ document.getElementById("cgm").addEventListener("click", function(){ if(cgmReady
 
 // ---------- Events ----------
 function nowForInput(){ var d=new Date(); document.getElementById("injT").value = hhmm(d); }
-document.getElementById("bz").addEventListener("input", function(e){ ui.bzDirty = e.target.value.trim()!==""; ui.bzFromCgm = false; renderBzSrc(); renderCalc(); });
+// Jede eigene Eingabe (auch Löschen) sperrt die automatische Übernahme bis Speichern/Abbrechen
+document.getElementById("bz").addEventListener("input", function(){ ui.bzDirty = true; ui.bzFromCgm = false; renderBzSrc(); renderCalc(); });
 document.getElementById("ke").addEventListener("input", renderCalc);
 document.getElementById("kePick").addEventListener("click", pickFoodDlg);
 document.getElementById("injKe").addEventListener("input", function(e){ ui.injKeDirty = e.target.value.trim()!==""; });
