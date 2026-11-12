@@ -17,3 +17,5 @@ desktop.ini
 # Archive und Exporte
 *.zip
 *.xlsx
+
+*.bak
