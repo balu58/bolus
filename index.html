@@ -67,7 +67,7 @@ p{margin:0 0 8px}
 .secretwrap{display:grid;grid-template-columns:1fr 48px;gap:6px}
 .secretwrap .eye{font:inherit;font-size:1.1rem;border:1px solid var(--line);background:var(--bg);border-radius:12px;min-height:48px;color:var(--ink)}
 .secretwrap .eye[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
-input.masked{-webkit-text-security:disc;-webkit-text-security:disc}
+input.masked{-webkit-text-security:disc}
 .secretinfo{color:var(--muted);margin-top:4px;min-height:1.1em;overflow-wrap:anywhere}
 .secretinfo.warn{color:var(--red)}
 .bzsrc{font-size:.78rem;color:var(--muted);min-height:1.1em;margin-top:2px}
@@ -76,6 +76,11 @@ input.masked{-webkit-text-security:disc;-webkit-text-security:disc}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .kebtns{display:flex;gap:6px;margin-top:6px}
 .kebtns button{font:inherit;font-size:1rem;flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;min-height:38px}
+/* Beschriftung mit kleinem Link-Button rechts daneben – gleiche Höhe wie ein normales Label */
+.lblrow{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:4px}
+.lblrow label{margin-bottom:0}
+.linkbtn{font:inherit;font-size:.78rem;line-height:1.2;padding:0;margin:0;border:0;background:none;color:var(--accent);cursor:pointer;white-space:nowrap}
+.linkbtn:active{opacity:.6}
 .kerow{grid-column:1/-1;margin-top:-6px}
 .injacts{display:flex;flex-direction:column;align-items:flex-end;flex:0 0 auto}
 .injacts button{min-height:36px;padding:4px 6px}
@@ -209,11 +214,10 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <div class="slots" id="slots" role="group" aria-label="Tageszeit"></div>
       <div class="fields">
         <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"><div class="bzsrc" id="bzSrc"></div></div>
-        <div><label for="ke">KE</label><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
+        <div><div class="lblrow"><label for="ke">KE</label><button type="button" class="linkbtn" id="kePick">Aus Lebensmitteln</button></div><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
           <div class="exprhint" id="keHint"></div></div>
         <div class="kerow">
           <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button" data-ins="+" aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button><button type="button" data-ins="/" aria-label="geteilt">÷</button><button type="button" data-ins="(" aria-label="Klammer auf">(</button><button type="button" data-ins=")" aria-label="Klammer zu">)</button></div>
-          <button type="button" class="foodpick" id="kePick">Aus Lebensmitteln</button>
           <div class="calcitems" id="keItems"></div></div>
         <div class="pctfield"><label for="pct">Auf-/Abschlag (%)</label>
           <div class="pctctl"><button type="button" class="step" id="pctMinus" aria-label="5 Prozent weniger">−</button><input id="pct" inputmode="text" autocomplete="off"><button type="button" class="step" id="pctPlus" aria-label="5 Prozent mehr">+</button></div>
@@ -399,7 +403,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "15.3";
+var APP_VERSION = "15.4";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
