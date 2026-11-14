@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dexcom G7 Live-Monitor</title>
+    <!-- Start-Favicon (Grün) mit einer ID zum dynamischen Ändern -->
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .card {
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .value-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: #2cc185;
+            margin: 10px 0;
+        }
+        .time-display {
+            font-size: 18px;
+            font-weight: 500;
+            color: #444;
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="label">Aktueller BZ-Wert</div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+            <div id="glucoseValue" class="value-display" style="margin: 0;">--</div>
+            <div id="trendArrow" style="font-size: 3.5rem; font-weight: bold; line-height: 1;"></div>
+        </div>
+        <div class="label" style="margin-top: 20px;">Zeitpunkt der Messung</div>
+        <div id="readingTime" class="time-display">Warte auf Daten...</div>
+        
+        <div id="statusText" class="status">Status: Initialisiere...</div>
+    </div>
+
+    <script>
+        const glucoseValue = document.getElementById('glucoseValue');
+        const readingTime = document.getElementById('readingTime');
+        const statusText = document.getElementById('statusText');
+        
+        // Greift gezielt auf den Daten-Endpoint zu
+        const BACKEND_URL = '/api/live-glucose'; 
+
+        // Optionaler API-Schlüssel: einmalig per anzeige.html?key=DEIN_SCHLÜSSEL aufrufen,
+        // er wird dann im Browser gemerkt und aus der Adresszeile entfernt.
+        const urlKey = new URLSearchParams(location.search).get('key');
+        if (urlKey) {
+            localStorage.setItem('dexcomApiKey', urlKey);
+            history.replaceState(null, '', location.pathname);
+        }
+        const API_KEY = localStorage.getItem('dexcomApiKey') || '';
+
+        async function fetchLiveGlucose() {
+            try {
+                statusText.innerText = "Status: Aktualisiere...";
+                
+                const response = await fetch(BACKEND_URL, API_KEY ? { headers: { 'X-Api-Key': API_KEY } } : undefined);
+                const data = await response.json();
+
+                if (data.success) {
+                    glucoseValue.innerText = `${data.value} mg/dL`;
+
+                    const arrowElement = document.getElementById('trendArrow');
+                    if (arrowElement && data.trend) {
+                        const arrows = {
+                            'flat': '→', 'singleup': '↑', 'doubleup': '⇈', 'fortyfiveup': '↗',
+                            'singledown': '↓', 'doubledown': '⇊', 'fortyfivedown': '↘',
+                            1: '⇈', 2: '↑', 3: '↗', 4: '→', 5: '↘', 6: '↓', 7: '⇊'
+                        };
+                        
+                        // Pfeilsymbol setzen
+                        arrowElement.innerText = arrows[data.trend] || '';
+                        
+                        // Farben zuweisen (Grün = stabil, Rot = steigend, Blau = fallend)
+                        arrowElement.style.color = '#2ecc71'; // Standard Grün
+                        if (['singleup', 'doubleup', 'fortyfiveup', 1, 2, 3].includes(data.trend)) arrowElement.style.color = '#e74c3c';
+                        if (['singledown', 'doubledown', 'fortyfivedown', 5, 6, 7].includes(data.trend)) arrowElement.style.color = '#3498db';
+                    }                    
+
+                    // Verarbeitet den numerischen Zeitstempel
+                    const messZeitpunkt = new Date(data.time).toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    readingTime.innerText = messZeitpunkt;
+
+                    statusText.innerText = `Letzte Abfrage: ${new Date().toLocaleTimeString('de-DE')} | Trend: ${data.trend}`;
+
+                    // Aktualisiert das Tab-Icon passend zum Wert
+                    updateFavicon(Number(data.value), false);
+                                        
+                } else {
+                    statusText.innerText = `Fehler vom Server: ${data.error}`;
+                    updateFavicon(null, true);
+                }
+            } catch (error) {
+                console.error("Verbindungsfehler:", error);
+                statusText.innerText = "Fehler: Verbindung zum Server fehlgeschlagen.";
+            }
+        }
+
+        // Sofort ausführen und alle 5 Minuten wiederholen
+        fetchLiveGlucose();
+        setInterval(fetchLiveGlucose, 300000);
+
+        function updateFavicon(glucoseValue, hasError = false) {
+            // 1. Unsichtbare Zeichenfläche (64x64 Pixel) erstellen
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            // 2. Hintergrundfarbe bestimmen
+            let bgColor = '#38a169'; // Grün (Standard / Zielbereich)
+            if (hasError) {
+                bgColor = '#718096'; // Grau bei Fehler
+            } else if (glucoseValue < 70) {
+                bgColor = '#e53e3e'; // Rot (< 70)
+            } else if (glucoseValue > 180) {
+                bgColor = '#ecc94b'; // Gelb (> 180)
+            }
+
+            // 3. Abgerundetes Quadrat zeichnen
+            ctx.fillStyle = bgColor;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 64, 64, 14);
+            ctx.fill();
+
+            // 4. Symbol zeichnen (Ausrufezeichen ODER Dexcom-Tropfen)
+            if (hasError) {
+                ctx.fillStyle = '#ffffff';
+                // Strich oben
+                ctx.beginPath();
+                ctx.roundRect(27, 12, 10, 26, 5);
+                ctx.fill();
+                // Punkt unten
+                ctx.beginPath();
+                ctx.arc(32, 48, 5.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Weißer Dexcom-Tropfen
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.moveTo(32, 14);
+                ctx.lineTo(50, 14);
+                ctx.lineTo(50, 32);
+                ctx.arc(32, 32, 18, 0, Math.PI * 1.5, false);
+                ctx.closePath();
+                ctx.stroke();
+            }
+
+            // 5. WICHTIG FÜR FIREFOX & CHROME: Altes Icon löschen und neu einfügen
+            const oldLink = document.getElementById('dynamic-favicon');
+            const newLink = document.createElement('link');
+            newLink.id = 'dynamic-favicon';
+            newLink.rel = 'icon';
+            newLink.type = 'image/png';
+            newLink.href = canvas.toDataURL('image/png');
+
+            if (oldLink) {
+                document.head.removeChild(oldLink);
+            }
+            document.head.appendChild(newLink);
+        }
+
+        // Direkt beim Laden der Seite einmal ausführen, damit sofort ein grünes Icon erscheint!
+        updateFavicon(100, false);
+
+
+    </script>
+</body>
+</html>
