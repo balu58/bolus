@@ -1,0 +1,38 @@
+<video id="kamera" autoplay playsinline></video>
+<button id="start">Kamera starten</button>
+<button id="foto" disabled>Foto aufnehmen</button>
+
+<canvas id="canvas" hidden></canvas>
+<img id="vorschau" alt="Aufgenommenes Foto">
+
+<script>
+  const video = document.querySelector("#kamera");
+  const canvas = document.querySelector("#canvas");
+  const fotoButton = document.querySelector("#foto");
+
+  document.querySelector("#start").addEventListener("click", async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+      });
+
+      video.srcObject = stream;
+      await video.play();
+      fotoButton.disabled = false;
+    } catch (error) {
+      console.error("Kamera konnte nicht gestartet werden:", error);
+    }
+  });
+
+  fotoButton.addEventListener("click", () => {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    document.querySelector("#vorschau").src =
+      canvas.toDataURL("image/jpeg", 0.9);
+  });
+</script>
