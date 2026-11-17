@@ -411,7 +411,7 @@ WICHTIGE REGELN FÜR DIE NÄHRWERTBERECHNUNG:
         </div>
 
         <div class="cs-disclaimer">
-          This is for informational purposes only. For medical advice or diagnosis, consult a professional. AI responses may include mistakes.
+          Dies dient ausschließlich zu Informationszwecken. Für medizinischen Rat oder eine Diagnose wenden Sie sich bitte an eine Fachkraft. Antworten von KI-Systemen können Fehler enthalten.
         </div>
       </dialog>
     `;
