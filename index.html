@@ -216,7 +216,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <div class="slots" id="slots" role="group" aria-label="Tageszeit"></div>
       <div class="fields">
         <div><label for="bz">BZ (mg/dl)</label><input id="bz" inputmode="numeric" autocomplete="off" placeholder="z. B. 144"><div class="bzsrc" id="bzSrc"></div></div>
-        <div><div class="lblrow"><label for="ke">KE</label><button type="button" class="linkbtn" id="kePick">Aus Lebensmitteln</button></div><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
+        <div><div class="lblrow"><label for="ke">KE</label><button type="button" class="linkbtn" id="openCarbsScannerBtn">Foto</button><button type="button" class="linkbtn" id="kePick">aus Tabelle Essen</button></div><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
           <div class="exprhint" id="keHint"></div></div>
         <div class="kerow">
           <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button" data-ins="+" aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button><button type="button" data-ins="/" aria-label="geteilt">÷</button><button type="button" data-ins="(" aria-label="Klammer auf">(</button><button type="button" data-ins=")" aria-label="Klammer zu">)</button></div>
@@ -371,6 +371,22 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <button class="ghost" id="cgmOff">Entfernen</button>
       </div>
       <p class="small" id="cgmStatus" style="margin-top:10px"></p>
+
+      <!-- Groq & Gemini Keys im localStorage) -->
+      <div class="card">
+        <h2>KI API-Keys Konfiguration (lokaler Webspeicher)</h2>
+        <div class="field-row">
+          <label for="cfgGroqKey">Groq API-Key (<code>carbs_groq_api_key</code>):</label>
+          <input type="password" id="cfgGroqKey" placeholder="gsk_..." />
+        </div>
+        <div class="field-row">
+          <label for="cfgGeminiKey">Google Gemini API-Key (<code>carbs_gemini_api_key</code>):</label>
+          <input type="password" id="cfgGeminiKey" placeholder="AIza..." />
+        </div>
+        <button type="button" id="saveCfgBtn" class="primary">Keys im Browser speichern</button>
+        <div id="cfgStatus" class="info-box"></div>
+      </div>
+
     </div>
     <div class="block" id="ghBlock">
       <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
@@ -399,12 +415,41 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 
 <dialog id="dlg"></dialog>
 
+//-------------------------------------------------------------------------------------
+<script src="carbs-scanner.js"></script>
 <script>
+    // Konfigurations-Felder für API-Keys aus dem localStorage laden & speichern
+    const cfgGroqInput = document.getElementById("cfgGroqKey");
+    const cfgGeminiInput = document.getElementById("cfgGeminiKey");
+    const cfgStatus = document.getElementById("cfgStatus");
+
+    cfgGroqInput.value = localStorage.getItem("carbs_groq_api_key") || "";
+    cfgGeminiInput.value = localStorage.getItem("carbs_gemini_api_key") || "";
+
+    document.getElementById("saveCfgBtn").addEventListener("click", () => {
+      localStorage.setItem("carbs_groq_api_key", cfgGroqInput.value.trim());
+      localStorage.setItem("carbs_gemini_api_key", cfgGeminiInput.value.trim());
+      cfgStatus.textContent = "API-Keys sicher im lokalen Webspeicher (localStorage) gespeichert.";
+      cfgStatus.style.display = "block";
+    });
+
+  // Scanner-Modul initialisieren und verknüpfen
+  CarbsScanner.init({
+    triggerSelector: "#openCarbsScannerBtn",      // Button Auslöser
+    targetInputSelector: "#ke",                   // vorhandenes KH-Feld
+    groqKeyStorageName: "carbs_groq_api_key",     // Key-Name für groqim localStorage
+    geminiKeyStorageName: "carbs_gemini_api_key", // Key-Name für gemini im localStorage
+    onApply: (data) => {
+      console.log("Übernommene Daten:", data.totalCarbs, data.items);
+    }
+  });
+//-------------------------------------------------------------------------------------
+
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "15.6";
+var APP_VERSION = "16.0";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
