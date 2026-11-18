@@ -6,31 +6,33 @@
     (currentScriptEl && currentScriptEl.getAttribute("data-dialog-url")) ||
     "carbcam-dialog-v3.html";
 
-  const SYSTEM_PROMPT = `Du bist ein präziser Ernährungs- und Diabetes-Assistent. Analysiere die Mahlzeit auf den übergebenen Fotos (1 bis 3 Perspektiven derselben Mahlzeit) und berechne die verwertbaren Kohlenhydrate in Gramm.
-
-WICHTIGE REGELN:
-1. MEHRERE PERSPEKTIVEN: Wenn mehrere Fotos übergeben werden, zeigen sie DIESELBE Mahlzeit aus verschiedenen Blickwinkeln (z. B. Draufsicht und 45°-Winkel). Nutze die zusätzlichen Winkel nur zur besseren Volumen- und Tiefenschätzung. Zähle Speisen NIEMALS doppelt oder dreifach!
-2. VERZEHRFERTIGES GEWICHT & NÄHRWERTE: Rechne immer mit verzehrfertigen, gegarten Gewichten (nicht Trockenmehl-Werte).
-   - Gebackener Pizzateig / Flammkuchen: Zerlege Pizza IMMER in Teigboden und Belag! Rechne für gebackenen Hefeteig ca. 36–42 g KH pro 100 g (nicht 50–70 g wie rohes Mehl).
-   - Gekochte Nudeln / Reis: ca. 24–28 g KH pro 100 g Kochgewicht.
-   - Gekochte Kartoffeln: ca. 15–17 g KH pro 100 g.
-   - Kuchen & Gebäck: Nutze Kuchenteller und Besteck als Größenmaßstab, um kleine Stücke nicht zu überschätzen.
-3. TROCKENGEWICHT: Gib bei Sättigungsbeilagen (Nudeln, Reis, Kartoffeln, Haferflocken, Hülsenfrüchte) zusätzlich das geschätzte Roh-/Trockengewicht in Gramm im Feld "trockengewicht_gramm" an (sonst null).
-4. ZUSATZHINWEISE: Berücksichtige optionale Hinweise des Nutzers (z. B. zuckerfreie Getränke, Soßenbinder, Teigdicke) vorrangig.
-
-Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-Codeblöcke):
-{
-  "zutaten": [
-    {
-      "name": "Bezeichnung der Zutat",
-      "gewicht_gramm": 200,
-      "trockengewicht_gramm": 80,
-      "kohlenhydrate_gramm": 52
-    }
-  ],
-  "gesamt_kohlenhydrate_gramm": 52,
-  "hinweis": "Kurze Begründung zur Schätzung"
-}`;
+  const SYSTEM_PROMPT = [
+    "Du bist ein präziser Ernährungs- und Diabetes-Assistent. Analysiere die Mahlzeit auf den übergebenen Fotos (1 bis 3 Perspektiven derselben Mahlzeit) und berechne die verwertbaren Kohlenhydrate in Gramm.",
+    "",
+    "WICHTIGE REGELN:",
+    "1. MEHRERE PERSPEKTIVEN: Wenn mehrere Fotos übergeben werden, zeigen sie DIESELBE Mahlzeit aus verschiedenen Blickwinkeln (z. B. Draufsicht und 45°-Winkel). Nutze die zusätzlichen Winkel nur zur besseren Volumen- und Tiefenschätzung. Zähle Speisen NIEMALS doppelt oder dreifach!",
+    "2. VERZEHRFERTIGES GEWICHT & NÄHRWERTE: Rechne immer mit verzehrfertigen, gegarten Gewichten (nicht Trockenmehl-Werte).",
+    "   - Gebackener Pizzateig / Flammkuchen: Zerlege Pizza IMMER in Teigboden und Belag! Rechne für gebackenen Hefeteig ca. 36–42 g KH pro 100 g (nicht 50–70 g wie rohes Mehl).",
+    "   - Gekochte Nudeln / Reis: ca. 24–28 g KH pro 100 g Kochgewicht.",
+    "   - Gekochte Kartoffeln: ca. 15–17 g KH pro 100 g.",
+    "   - Kuchen & Gebäck: Nutze Kuchenteller und Besteck als Größenmaßstab, um kleine Stücke nicht zu überschätzen.",
+    "3. TROCKENGEWICHT: Gib bei Sättigungsbeilagen (Nudeln, Reis, Kartoffeln, Haferflocken, Hülsenfrüchte) zusätzlich das geschätzte Roh-/Trockengewicht in Gramm im Feld trockengewicht_gramm an (sonst null).",
+    "4. ZUSATZHINWEISE: Berücksichtige optionale Hinweise des Nutzers (z. B. zuckerfreie Getränke, Soßenbinder, Teigdicke) vorrangig.",
+    "",
+    "Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-Codeblöcke):",
+    "{",
+    '  "zutaten": [',
+    "    {",
+    '      "name": "Bezeichnung der Zutat",',
+    '      "gewicht_gramm": 200,',
+    '      "trockengewicht_gramm": 80,',
+    '      "kohlenhydrate_gramm": 52',
+    "    }",
+    "  ],",
+    '  "gesamt_kohlenhydrate_gramm": 52,',
+    '  "hinweis": "Kurze Begründung zur Schätzung"',
+    "}"
+  ].join("\n");
 
   const CarbCamScanner = {
     config: {
@@ -85,12 +87,8 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
           }
         } catch (err) {
           alert(
-            "Der CarbCam-Dialog konnte nicht geladen werden.
-
-" +
-            "Hinweis: Bitte die Seite über einen lokalen Server (z. B. http://localhost) oder GitHub Pages öffnen, nicht direkt per file://.
-
-" +
+            "Der CarbCam-Dialog konnte nicht geladen werden.\n\n" +
+            "Hinweis: Bitte die Seite über einen lokalen Server (z. B. http://localhost) oder GitHub Pages öffnen, nicht direkt per file://.\n\n" +
             "Details: " + err.message
           );
         }
@@ -104,7 +102,7 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
       }
       const response = await fetch(this.config.dialogUrl);
       if (!response.ok) {
-        throw new Error(`Dialog-Template nicht gefunden (${this.config.dialogUrl}): HTTP ${response.status}`);
+        throw new Error("Dialog-Template nicht gefunden (" + this.config.dialogUrl + "): HTTP " + response.status);
       }
       const html = await response.text();
       const wrapper = document.createElement("div");
@@ -273,11 +271,10 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
       this.state.images.forEach((img, idx) => {
         const wrap = document.createElement("div");
         wrap.className = "cc-thumb-wrap";
-        wrap.innerHTML = `
-          <img src="${img.dataUrl}" alt="Perspektive ${idx + 1}" />
-          <span class="cc-thumb-badge">Bild ${idx + 1} (${img.sizeKB} KB)</span>
-          <button type="button" class="cc-thumb-remove" aria-label="Entfernen">&times;</button>
-        `;
+        wrap.innerHTML =
+          '<img src="' + img.dataUrl + '" alt="Perspektive ' + (idx + 1) + '" />' +
+          '<span class="cc-thumb-badge">Bild ' + (idx + 1) + " (" + img.sizeKB + " KB)</span>" +
+          '<button type="button" class="cc-thumb-remove" aria-label="Entfernen">&times;</button>';
         wrap.querySelector(".cc-thumb-remove").addEventListener("click", () => {
           this.state.images.splice(idx, 1);
           this.renderPreviews();
@@ -296,12 +293,12 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
       const statusBox = document.getElementById("ccStatusBox");
       statusBox.classList.remove("error");
       statusBox.hidden = false;
-      statusBox.textContent = `${label} läuft... 0.0 s`;
+      statusBox.textContent = label + " läuft... 0.0 s";
 
       clearInterval(this.state.timerInterval);
       this.state.timerInterval = setInterval(() => {
         const elapsed = ((performance.now() - this.state.startTime) / 1000).toFixed(1);
-        statusBox.textContent = `${label} läuft... ${elapsed} s`;
+        statusBox.textContent = label + " läuft... " + elapsed + " s";
       }, 100);
     },
 
@@ -321,10 +318,12 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
     buildUserPrompt() {
       const tip = document.getElementById("ccUserTip").value.trim();
       const count = this.state.images.length;
-      let text = `Analysiere diese ${count > 1 ? count + " Perspektiven derselben Mahlzeit" : "Mahlzeit"} und gib das Ergebnis als JSON zurück.`;
+      let text =
+        "Analysiere diese " +
+        (count > 1 ? count + " Perspektiven derselben Mahlzeit" : "Mahlzeit") +
+        " und gib das Ergebnis als JSON zurück.";
       if (tip) {
-        text += `
-Zusätzlicher Hinweis des Nutzers: "${tip}"`;
+        text += '\nZusätzlicher Hinweis des Nutzers: "' + tip + '"';
       }
       return text;
     },
@@ -373,7 +372,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
         }
       } catch (err) {
         const dur = this.stopTimer();
-        this.showStatus(`Fehler nach ${dur} s: ${err.message}`, true);
+        this.showStatus("Fehler nach " + dur + " s: " + err.message, true);
       } finally {
         analyzeBtn.disabled = false;
       }
@@ -389,7 +388,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
       for (const img of this.state.images) {
         contentParts.push({
           type: "image_url",
-          image_url: { url: `data:${img.mimeType};base64,${img.base64}` }
+          image_url: { url: "data:" + img.mimeType + ";base64," + img.base64 }
         });
       }
 
@@ -397,7 +396,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": "Bearer " + apiKey
         },
         body: JSON.stringify({
           model: "qwen/qwen3.8-27b",
@@ -412,7 +411,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || `Groq HTTP ${res.status}`);
+        throw new Error((data.error && data.error.message) || "Groq HTTP " + res.status);
       }
       return this.parseJsonSafe(data.choices[0].message.content);
     },
@@ -423,16 +422,16 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
         throw new Error("Kein Gemini API-Key im localStorage hinterlegt.");
       }
 
-      const parts = [{ text: SYSTEM_PROMPT + "
-
-" + this.buildUserPrompt() }];
+      const parts = [{ text: SYSTEM_PROMPT + "\n\n" + this.buildUserPrompt() }];
       for (const img of this.state.images) {
         parts.push({
           inline_data: { mime_type: img.mimeType, data: img.base64 }
         });
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=" +
+        encodeURIComponent(apiKey);
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -447,7 +446,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || `Gemini HTTP ${res.status}`);
+        throw new Error((data.error && data.error.message) || "Gemini HTTP " + res.status);
       }
       const rawText = data.candidates[0].content.parts[0].text;
       return this.parseJsonSafe(rawText);
@@ -491,7 +490,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || `Claude HTTP ${res.status}`);
+        throw new Error((data.error && data.error.message) || "Claude HTTP " + res.status);
       }
       const textBlock = data.content.find((b) => b.type === "text");
       return this.parseJsonSafe(textBlock ? textBlock.text : "");
@@ -530,7 +529,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
       document.getElementById("ccAnalysisNote").textContent = parsed.hinweis || "";
       const totalKB = this.state.images.reduce((acc, i) => acc + i.sizeKB, 0);
       document.getElementById("ccTimingInfo").textContent =
-        `Modell: ${modelLabel} • Dauer: ${duration} s • ${this.state.images.length} Bild(er) (${totalKB} KB)`;
+        "Modell: " + modelLabel + " • Dauer: " + duration + " s • " + this.state.images.length + " Bild(er) (" + totalKB + " KB)";
 
       document.getElementById("ccResultSection").hidden = false;
       document.getElementById("ccApplyBtn").hidden = false;
@@ -546,21 +545,20 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
 
         const dryText =
           item.trockengewicht_gramm != null && item.trockengewicht_gramm > 0
-            ? `(tr: ${Math.round(item.trockengewicht_gramm)}g)`
+            ? "(tr: " + Math.round(item.trockengewicht_gramm) + "g)"
             : "";
 
-        row.innerHTML = `
-          <input type="text" class="cc-in-name" value="${this.escapeHtml(item.name)}" aria-label="Zutat" />
-          <div class="cc-weight-cell">
-            <input type="number" class="cc-in-weight" value="${Math.round(item.gewicht_gramm)}" min="0" step="1" aria-label="Gewicht in g" />
-            <span class="cc-dry-tag">${dryText}</span>
-          </div>
-          <div class="cc-carbs-cell">
-            <input type="number" class="cc-in-carbs" value="${Math.round(item.kohlenhydrate_gramm)}" min="0" step="1" aria-label="Kohlenhydrate in g" />
-            <span style="font-size:0.75rem;">g</span>
-          </div>
-          <button type="button" class="cc-del-row" title="Zeile löschen">&times;</button>
-        `;
+        row.innerHTML =
+          '<input type="text" class="cc-in-name" value="' + this.escapeHtml(item.name) + '" aria-label="Zutat" />' +
+          '<div class="cc-weight-cell">' +
+          '<input type="number" class="cc-in-weight" value="' + Math.round(item.gewicht_gramm) + '" min="0" step="1" aria-label="Gewicht in g" />' +
+          '<span class="cc-dry-tag">' + dryText + "</span>" +
+          "</div>" +
+          '<div class="cc-carbs-cell">' +
+          '<input type="number" class="cc-in-carbs" value="' + Math.round(item.kohlenhydrate_gramm) + '" min="0" step="1" aria-label="Kohlenhydrate in g" />' +
+          '<span style="font-size:0.75rem;">g</span>' +
+          "</div>" +
+          '<button type="button" class="cc-del-row" title="Zeile löschen">&times;</button>';
 
         row.querySelector(".cc-in-name").addEventListener("input", (e) => {
           item.name = e.target.value;
@@ -576,7 +574,7 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
           if (item.dryRatio != null) {
             item.trockengewicht_gramm = Math.round(newWeight * item.dryRatio);
             row.querySelector(".cc-dry-tag").textContent =
-              item.trockengewicht_gramm > 0 ? `(tr: ${item.trockengewicht_gramm}g)` : "";
+              item.trockengewicht_gramm > 0 ? "(tr: " + item.trockengewicht_gramm + "g)" : "";
           }
           this.updateTotalDisplay();
         });
