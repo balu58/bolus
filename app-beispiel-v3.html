@@ -113,7 +113,7 @@
       <div class="form-row">
         <label for="mainCarbsInput"><strong>Kohlenhydrate (g):</strong></label>
         <input type="number" id="mainCarbsInput" class="main-input" placeholder="z. B. 50" />
-        <button type="button" id="openCarbCamBtn" class="btn btn-primary">
+        <button type="button" id="openCarbsScannerBtn" class="btn btn-primary">
           📷 Foto-Scanner öffnen
         </button>
       </div>
@@ -124,7 +124,7 @@
       <h2>API-Konfiguration (lokal im Browser gespeichert)</h2>
 
       <div class="field-group">
-        <label for="cfgGroqKey">Groq API-Key (<code>carbcam_groq_api_key</code>)</label>
+        <label for="cfgGroqKey">Groq API-Key (<code>carbs_groq_api_key</code>)</label>
         <div class="key-input-wrap">
           <input type="password" id="cfgGroqKey" placeholder="gsk_..." />
           <button type="button" class="eye-btn" data-target="cfgGroqKey" aria-label="Key anzeigen">👁️</button>
@@ -132,7 +132,7 @@
       </div>
 
       <div class="field-group">
-        <label for="cfgGeminiKey">Google Gemini API-Key (<code>carbcam_gemini_api_key</code>)</label>
+        <label for="cfgGeminiKey">Google Gemini API-Key (<code>carbs_gemini_api_key</code>)</label>
         <div class="key-input-wrap">
           <input type="password" id="cfgGeminiKey" placeholder="AIza..." />
           <button type="button" class="eye-btn" data-target="cfgGeminiKey" aria-label="Key anzeigen">👁️</button>
@@ -140,7 +140,7 @@
       </div>
 
       <div class="field-group">
-        <label for="cfgClaudeKey">Anthropic Claude API-Key – optional (<code>carbcam_claude_api_key</code>)</label>
+        <label for="cfgClaudeKey">Anthropic Claude API-Key – optional (<code>carbs_claude_api_key</code>)</label>
         <div class="key-input-wrap">
           <input type="password" id="cfgClaudeKey" placeholder="sk-ant-... (optional)" />
           <button type="button" class="eye-btn" data-target="cfgClaudeKey" aria-label="Key anzeigen">👁️</button>
@@ -157,11 +157,11 @@
   <!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
   <script src="carbcam-scanner-v3.js" data-dialog-url="carbcam-dialog-v3.html"></script>
   <script>
-    // 1. Gespeicherte Keys in die Konfigurationsfelder laden
+    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
     const KEY_MAP = {
-      cfgGroqKey: "carbcam_groq_api_key",
-      cfgGeminiKey: "carbcam_gemini_api_key",
-      cfgClaudeKey: "carbcam_claude_api_key"
+      cfgGroqKey: "carbs_groq_api_key",
+      cfgGeminiKey: "carbs_gemini_api_key",
+      cfgClaudeKey: "carbs_claude_api_key"
     };
 
     Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
@@ -195,13 +195,13 @@
       setTimeout(() => (fb.hidden = true), 2500);
     });
 
-    // 4. CarbCam-Scanner initialisieren (lädt carbcam-dialog-v3.html automatisch nach)
-    CarbCamScanner.init({
-      triggerSelector: "#openCarbCamBtn",
+    // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
+    CarbsScanner.init({
+      triggerSelector: "#openCarbsScannerBtn",
       targetInputSelector: "#mainCarbsInput",
-      groqKeyStorageName: "carbcam_groq_api_key",
-      geminiKeyStorageName: "carbcam_gemini_api_key",
-      claudeKeyStorageName: "carbcam_claude_api_key",
+      groqKeyStorageName: "carbs_groq_api_key",
+      geminiKeyStorageName: "carbs_gemini_api_key",
+      claudeKeyStorageName: "carbs_claude_api_key",
       onApply: (result) => {
         console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
       }

@@ -1,7 +1,6 @@
 (function (global) {
   "use strict";
 
-  // Liest automatisch den Pfad aus <script src="carbcam-scanner-v3.js" data-dialog-url="carbcam-dialog-v3.html">
   const currentScriptEl = document.currentScript;
   const defaultDialogUrl =
     (currentScriptEl && currentScriptEl.getAttribute("data-dialog-url")) ||
@@ -35,28 +34,67 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
 
   const CarbCamScanner = {
     config: {
-      triggerSelector: "#openCarbCamBtn",
+      triggerSelector: "#openCarbsScannerBtn",
       targetInputSelector: "#mainCarbsInput",
       dialogUrl: defaultDialogUrl,
-      groqKeyStorageName: "carbcam_groq_api_key",
-      geminiKeyStorageName: "carbcam_gemini_api_key",
-      claudeKeyStorageName: "carbcam_claude_api_key",
+      groqKeyStorageName: "carbs_groq_api_key",
+      geminiKeyStorageName: "carbs_gemini_api_key",
+      claudeKeyStorageName: "carbs_claude_api_key",
       onApply: null
     },
 
     state: {
       provider: "groq",
-      images: [], // { base64, mimeType, width, height, sizeKB, label }
+      images: [],
       items: [],
       timerInterval: null,
       startTime: 0,
-      dialogInjected: false
+      dialogInjected: false,
+      eventsBound: false
     },
 
     async init(userConfig = {}) {
       this.config = { ...this.config, ...userConfig };
-      await this.injectDialogHtml();
-      this.bindEvents();
+      this.bindTriggerEarly();
+      try {
+        await this.injectDialogHtml();
+        this.bindDialogEvents();
+      } catch (err) {
+        console.error("[CarbCamScanner] Fehler beim Laden des Dialogs:", err);
+      }
+    },
+
+    bindTriggerEarly() {
+      if (this._triggerBound) return;
+      this._triggerBound = true;
+
+      document.addEventListener("click", async (e) => {
+        const trigger = e.target.closest(this.config.triggerSelector);
+        if (!trigger) return;
+
+        e.preventDefault();
+        try {
+          if (!this.state.dialogInjected) {
+            await this.injectDialogHtml();
+          }
+          this.bindDialogEvents();
+          const modal = document.getElementById("carbcamModal");
+          if (modal) {
+            this.resetDialog();
+            modal.showModal();
+          }
+        } catch (err) {
+          alert(
+            "Der CarbCam-Dialog konnte nicht geladen werden.
+
+" +
+            "Hinweis: Bitte die Seite über einen lokalen Server (z. B. http://localhost) oder GitHub Pages öffnen, nicht direkt per file://.
+
+" +
+            "Details: " + err.message
+          );
+        }
+      });
     },
 
     async injectDialogHtml() {
@@ -66,7 +104,7 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
       }
       const response = await fetch(this.config.dialogUrl);
       if (!response.ok) {
-        throw new Error(`Dialog-Template konnte nicht geladen werden (${this.config.dialogUrl}): HTTP ${response.status}`);
+        throw new Error(`Dialog-Template nicht gefunden (${this.config.dialogUrl}): HTTP ${response.status}`);
       }
       const html = await response.text();
       const wrapper = document.createElement("div");
@@ -77,22 +115,15 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
       this.state.dialogInjected = true;
     },
 
-    bindEvents() {
-      const trigger = document.querySelector(this.config.triggerSelector);
+    bindDialogEvents() {
+      if (this.state.eventsBound) return;
       const modal = document.getElementById("carbcamModal");
       if (!modal) return;
-
-      if (trigger) {
-        trigger.addEventListener("click", () => {
-          this.resetDialog();
-          modal.showModal();
-        });
-      }
+      this.state.eventsBound = true;
 
       document.getElementById("ccCloseTopBtn").addEventListener("click", () => modal.close());
       document.getElementById("ccCancelBtn").addEventListener("click", () => modal.close());
 
-      // Modell-Auswahl
       modal.querySelectorAll(".cc-model-card").forEach((card) => {
         card.addEventListener("click", () => {
           modal.querySelectorAll(".cc-model-card").forEach((c) => c.classList.remove("active"));
@@ -105,7 +136,6 @@ Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format (ohne Markdown-
         });
       });
 
-      // Kamera & Mediathek (iOS-kompatibel)
       const cameraInput = document.getElementById("ccCameraInput");
       const galleryInput = document.getElementById("ccGalleryInput");
 
@@ -591,4 +621,5 @@ Zusätzlicher Hinweis des Nutzers: "${tip}"`;
   };
 
   global.CarbCamScanner = CarbCamScanner;
+  global.CarbsScanner = CarbCamScanner;
 })(window);
