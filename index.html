@@ -427,69 +427,12 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="dlg"></dialog>
-
-//-------------------------------------------------------------------------------------
-<!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
-<script src="carbcam-scanner-v3.js"></script>
-  <script>
-    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
-    const KEY_MAP = {
-      cfgGroqKey: "carbs_groq_api_key",
-      cfgGeminiKey: "carbs_gemini_api_key",
-      cfgClaudeKey: "carbs_claude_api_key"
-    };
-
-    Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
-      const el = document.getElementById(inputId);
-      if (el) el.value = localStorage.getItem(storageKey) || "";
-    });
-
-    // 2. Auge-Button (Passwort sichtbar / unsichtbar schalten)
-    document.querySelectorAll(".eye-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const input = document.getElementById(btn.getAttribute("data-target"));
-        if (!input) return;
-        const isHidden = input.type === "password";
-        input.type = isHidden ? "text" : "password";
-        btn.textContent = isHidden ? "🙈" : "👁️";
-      });
-    });
-
-    // 3. Keys im localStorage speichern
-    document.getElementById("saveKeysBtn").addEventListener("click", () => {
-      Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
-        const val = document.getElementById(inputId).value.trim();
-        if (val) {
-          localStorage.setItem(storageKey, val);
-        } else {
-          localStorage.removeItem(storageKey);
-        }
-      });
-      const fb = document.getElementById("saveFeedback");
-      fb.hidden = false;
-      setTimeout(() => (fb.hidden = true), 2500);
-    });
-
-    // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
-    CarbsScanner.init({
-      triggerSelector: "#openCarbsScannerBtn",
-      targetInputSelector: "#ke",
-      groqKeyStorageName: "carbs_groq_api_key",
-      geminiKeyStorageName: "carbs_gemini_api_key",
-      claudeKeyStorageName: "carbs_claude_api_key",
-      onApply: (result) => {
-        console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
-      }
-    });
-    // Ende CarbCamScanner
-//-------------------------------------------------------------------------------------
-
-
+<script>
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "16.3";
+var APP_VERSION = "16.4";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1606,5 +1549,63 @@ window.addEventListener("pageshow", function(e){ if(e.persisted) fetchCgm(); });
 document.addEventListener("visibilitychange", function(){ if(!document.hidden){ fetchCgm(); ghSync(); nowForInput(); renderIOB(); renderRecent(); renderCalc(); renderSlots(); } });
 })();
 </script>
+
+//-------------------------------------------------------------------------------------
+<!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
+<script src="carbcam-scanner-v3.js"></script>
+  <script>
+    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
+    const KEY_MAP = {
+      cfgGroqKey: "carbs_groq_api_key",
+      cfgGeminiKey: "carbs_gemini_api_key",
+      cfgClaudeKey: "carbs_claude_api_key"
+    };
+
+    Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
+      const el = document.getElementById(inputId);
+      if (el) el.value = localStorage.getItem(storageKey) || "";
+    });
+
+    // 2. Auge-Button (Passwort sichtbar / unsichtbar schalten)
+    document.querySelectorAll(".eye-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.getAttribute("data-target"));
+        if (!input) return;
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "👁" : "👁";
+      });
+    });
+
+    // 3. Keys im localStorage speichern
+    document.getElementById("saveKeysBtn").addEventListener("click", () => {
+      Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
+        const val = document.getElementById(inputId).value.trim();
+        if (val) {
+          localStorage.setItem(storageKey, val);
+        } else {
+          localStorage.removeItem(storageKey);
+        }
+      });
+      const fb = document.getElementById("saveFeedback");
+      fb.hidden = false;
+      setTimeout(() => (fb.hidden = true), 2500);
+    });
+
+    // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
+    CarbsScanner.init({
+      triggerSelector: "#openCarbsScannerBtn",
+      targetInputSelector: "#ke",
+      groqKeyStorageName: "carbs_groq_api_key",
+      geminiKeyStorageName: "carbs_gemini_api_key",
+      claudeKeyStorageName: "carbs_claude_api_key",
+      onApply: (result) => {
+        console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
+      }
+    });
+    // Ende CarbCamScanner
+//-------------------------------------------------------------------------------------
+</script>
+
 </body>
 </html>
