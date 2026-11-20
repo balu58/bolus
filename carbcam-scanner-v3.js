@@ -365,8 +365,8 @@
           const parsed = await this.callGemini();
           this.displayResult(parsed, usedModelLabel);
         } else if (selected === "claude") {
-          this.startTimer("Claude Haiku 4.5 Analyse");
-          usedModelLabel = "ANTHROPIC / claude-haiku-4-5-20251001";
+          this.startTimer("Claude Haiku 5.5 Analyse");
+          usedModelLabel = "ANTHROPIC / claude-haiku-5-5-20261001";
           const parsed = await this.callClaude();
           this.displayResult(parsed, usedModelLabel);
         }
@@ -480,7 +480,7 @@
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "claude-haiku-5-5-20261001",
           max_tokens: 1024,
           temperature: 0.2,
           system: SYSTEM_PROMPT,
