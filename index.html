@@ -371,25 +371,9 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <button class="ghost" id="cgmOff">Entfernen</button>
       </div>
       <p class="small" id="cgmStatus" style="margin-top:10px"></p>
-
-      <!-- Groq & Gemini Keys im localStorage) -->
-      <div class="card">
-        <h2>KI API-Keys Konfiguration (lokaler Webspeicher)</h2>
-        <div class="field-row">
-          <label for="cfgGroqKey">Groq API-Key (<code>carbs_groq_api_key</code>):</label>
-          <input type="password" id="cfgGroqKey" placeholder="gsk_..." />
-        </div>
-        <div class="field-row">
-          <label for="cfgGeminiKey">Google Gemini API-Key (<code>carbs_gemini_api_key</code>):</label>
-          <input type="password" id="cfgGeminiKey" placeholder="AIza..." />
-        </div>
-        <button type="button" id="saveCfgBtn" class="primary">Keys im Browser speichern</button>
-        <div id="cfgStatus" class="info-box"></div>
-      </div>
-
     </div>
     <div class="block" id="ghBlock">
-      <h2 style="margin-top:0">Synchronisation (GitHub)</h2>
+      <h2 style="margin-top:0">Synchronisation (GitHub Daten)</h2>
       <p class="muted small">Gleicht deine Daten automatisch zwischen deinen Geräten ab, über ein <b>privates</b> GitHub-Repository. Einrichtung siehe README. Der Token wird nur auf diesem Gerät gespeichert und ist – wie alles in diesem Bereich – nicht Teil der Sicherung.</p>
       <div style="margin-top:10px"><label for="ghRepo">Repository (benutzername/name)</label><input id="ghRepo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="benutzername/bolus-daten" style="font-size:1rem"></div>
       <div style="margin-top:10px"><label for="ghToken">Zugangs-Token</label><div class="secretwrap"><input id="ghToken" name="x-gh-t" type="text" class="secret masked" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="github_pat_…" style="font-size:1rem"><button type="button" class="eye" data-for="ghToken" aria-label="Token anzeigen">👁</button></div><div class="secretinfo small" id="ghTokenInfo"></div></div>
@@ -400,6 +384,35 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       </div>
       <p class="small" id="ghStatus" style="margin-top:10px"></p>
     </div>
+
+<!-- Bereich 2: Deine bestehende Konfigurations-Oberfläche (localStorage) -->
+     <div class="block" id="kiKeysBlock">
+      <h2>API-Konfiguration (lokal im Browser gespeichert)</h2>
+      <div class="field-group">
+        <label for="cfgGroqKey">Groq API-Key (<code>carbs_groq_api_key</code>)</label>
+        <div class="key-input-wrap">
+          <input type="password" id="cfgGroqKey" placeholder="gsk_..." />
+          <button type="button" class="eye-btn" data-target="cfgGroqKey" aria-label="Key anzeigen">👁</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="cfgGeminiKey">Google Gemini API-Key (<code>carbs_gemini_api_key</code>)</label>
+        <div class="key-input-wrap">
+          <input type="password" id="cfgGeminiKey" placeholder="AIza..." />
+          <button type="button" class="eye-btn" data-target="cfgGeminiKey" aria-label="Key anzeigen">👁</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="cfgClaudeKey">Anthropic Claude API-Key – optional (<code>carbs_claude_api_key</code>)</label>
+        <div class="key-input-wrap">
+          <input type="password" id="cfgClaudeKey" placeholder="sk-ant-... (optional)" />
+          <button type="button" class="eye-btn" data-target="cfgClaudeKey" aria-label="Key anzeigen">👁</button>
+        </div>
+      </div>
+      <div>
+        <button type="button" id="saveKeysBtn" class="primary">Keys im Browser speichern</button>
+        <span id="saveFeedback" class="save-msg" hidden>Gespeichert!</span>
+      </div>
   </section>
 </main>
 
@@ -416,40 +429,67 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 <dialog id="dlg"></dialog>
 
 //-------------------------------------------------------------------------------------
-<script src="carbs-scanner.js"></script>
-<script>
-    // Konfigurations-Felder für API-Keys aus dem localStorage laden & speichern
-    const cfgGroqInput = document.getElementById("cfgGroqKey");
-    const cfgGeminiInput = document.getElementById("cfgGeminiKey");
-    const cfgStatus = document.getElementById("cfgStatus");
+<!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
+<script src="carbcam-scanner-v3.js"></script>
+  <script>
+    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
+    const KEY_MAP = {
+      cfgGroqKey: "carbs_groq_api_key",
+      cfgGeminiKey: "carbs_gemini_api_key",
+      cfgClaudeKey: "carbs_claude_api_key"
+    };
 
-    cfgGroqInput.value = localStorage.getItem("carbs_groq_api_key") || "";
-    cfgGeminiInput.value = localStorage.getItem("carbs_gemini_api_key") || "";
-
-    document.getElementById("saveCfgBtn").addEventListener("click", () => {
-      localStorage.setItem("carbs_groq_api_key", cfgGroqInput.value.trim());
-      localStorage.setItem("carbs_gemini_api_key", cfgGeminiInput.value.trim());
-      cfgStatus.textContent = "API-Keys sicher im lokalen Webspeicher (localStorage) gespeichert.";
-      cfgStatus.style.display = "block";
+    Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
+      const el = document.getElementById(inputId);
+      if (el) el.value = localStorage.getItem(storageKey) || "";
     });
 
-  // Scanner-Modul initialisieren und verknüpfen
-  CarbsScanner.init({
-    triggerSelector: "#openCarbsScannerBtn",      // Button Auslöser
-    targetInputSelector: "#ke",                   // vorhandenes KH-Feld
-    groqKeyStorageName: "carbs_groq_api_key",     // Key-Name für groqim localStorage
-    geminiKeyStorageName: "carbs_gemini_api_key", // Key-Name für gemini im localStorage
-    onApply: (data) => {
-      console.log("Übernommene Daten:", data.totalCarbs, data.items);
-    }
-  });
+    // 2. Auge-Button (Passwort sichtbar / unsichtbar schalten)
+    document.querySelectorAll(".eye-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.getAttribute("data-target"));
+        if (!input) return;
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "🙈" : "👁️";
+      });
+    });
+
+    // 3. Keys im localStorage speichern
+    document.getElementById("saveKeysBtn").addEventListener("click", () => {
+      Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
+        const val = document.getElementById(inputId).value.trim();
+        if (val) {
+          localStorage.setItem(storageKey, val);
+        } else {
+          localStorage.removeItem(storageKey);
+        }
+      });
+      const fb = document.getElementById("saveFeedback");
+      fb.hidden = false;
+      setTimeout(() => (fb.hidden = true), 2500);
+    });
+
+    // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
+    CarbsScanner.init({
+      triggerSelector: "#openCarbsScannerBtn",
+      targetInputSelector: "#mainCarbsInput",
+      groqKeyStorageName: "carbs_groq_api_key",
+      geminiKeyStorageName: "carbs_gemini_api_key",
+      claudeKeyStorageName: "carbs_claude_api_key",
+      onApply: (result) => {
+        console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
+      }
+    });
+    // Ende CarbCamScanner
 //-------------------------------------------------------------------------------------
+
 
 (function(){
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "16.1";
+var APP_VERSION = "16.2";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
