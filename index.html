@@ -473,7 +473,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
     // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
     CarbsScanner.init({
       triggerSelector: "#openCarbsScannerBtn",
-      targetInputSelector: "#mainCarbsInput",
+      targetInputSelector: "#ke",
       groqKeyStorageName: "carbs_groq_api_key",
       geminiKeyStorageName: "carbs_gemini_api_key",
       claudeKeyStorageName: "carbs_claude_api_key",
@@ -489,7 +489,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "16.2";
+var APP_VERSION = "16.3";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1396,6 +1396,25 @@ function nowForInput(){ var d=new Date(); document.getElementById("injT").value 
 // Jede eigene Eingabe (auch Löschen) sperrt die automatische Übernahme bis Speichern/Abbrechen
 document.getElementById("bz").addEventListener("input", function(){ ui.bzDirty = true; ui.bzFromCgm = false; renderBzSrc(); renderCalc(); });
 document.getElementById("ke").addEventListener("input", renderCalc);
+var photoConversionInstalled = false;
+document.getElementById("openCarbsScannerBtn").addEventListener("click", function(){
+  if(photoConversionInstalled) return;
+  var scanner = window.CarbsScanner;
+  if(!scanner || !scanner.config){
+    console.error("CarbCamScanner ist nicht initialisiert.");
+    return;
+  }
+  var previousOnApply = scanner.config.onApply;
+  scanner.config.targetInputSelector = null;
+  scanner.config.onApply = function(result){
+    var keInput = document.getElementById("ke");
+    keInput.value = String(result.totalCarbs / 10);
+    keInput.dispatchEvent(new Event("input", {bubbles:true}));
+    keInput.dispatchEvent(new Event("change", {bubbles:true}));
+    if(typeof previousOnApply === "function") previousOnApply(result);
+  };
+  photoConversionInstalled = true;
+});
 document.getElementById("kePick").addEventListener("click", pickFoodDlg);
 document.querySelectorAll(".kebtns button").forEach(function(b){ b.addEventListener("mousedown", function(e){ e.preventDefault(); }); b.addEventListener("click", function(){
   var i = document.getElementById("ke"); var a = i.selectionStart!=null ? i.selectionStart : i.value.length, z = i.selectionEnd!=null ? i.selectionEnd : i.value.length;
