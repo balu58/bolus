@@ -67,6 +67,9 @@ p{margin:0 0 8px}
 .secretwrap{display:grid;grid-template-columns:1fr 48px;gap:6px}
 .secretwrap .eye{font:inherit;font-size:1.1rem;border:1px solid var(--line);background:var(--bg);border-radius:12px;min-height:48px;color:var(--ink)}
 .secretwrap .eye[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.key-input-wrap{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:6px}
+.key-input-wrap input{min-width:0}
+.key-input-wrap .eye-btn{font:inherit;font-size:1.1rem;border:1px solid var(--line);background:var(--bg);border-radius:12px;min-height:48px;color:var(--ink)}
 input.masked{-webkit-text-security:disc}
 .secretinfo{color:var(--muted);margin-top:4px;min-height:1.1em;overflow-wrap:anywhere}
 .secretinfo.warn{color:var(--red)}
@@ -387,7 +390,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 
 <!-- Bereich 2: Deine bestehende Konfigurations-Oberfläche (localStorage) -->
      <div class="block" id="kiKeysBlock">
-      <h2>API-Konfiguration (lokal im Browser gespeichert)</h2>
+      <h2>API-Konfiguration für die KI Bilderkennung</h2>
       <div class="field-group">
         <label for="cfgGroqKey">Groq API-Key (<code>carbs_groq_api_key</code>)</label>
         <div class="key-input-wrap">
@@ -432,7 +435,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "16.4";
+var APP_VERSION = "16.5";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
