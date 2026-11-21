@@ -387,16 +387,32 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
           <button type="button" class="eye-btn" data-target="cfgGeminiKey" aria-label="Key anzeigen">👁</button>
         </div>
       </div>
+      
       <div class="field-group">
-        <label for="cfgClaudeKey">Anthropic Claude API-Key – optional (<code>carbs_claude_api_key</code>)</label>
+        <label for="cfgCustomUrl">Benutzerdefiniert – API-URL (<code>carbs_custom_api_url</code>)</label>
         <div class="key-input-wrap">
-          <input type="password" id="cfgClaudeKey" placeholder="sk-ant-... (optional)" />
-          <button type="button" class="eye-btn" data-target="cfgClaudeKey" aria-label="Key anzeigen">👁</button>
+          <input type="url" id="cfgCustomUrl" placeholder="https://api.openai.com/v1/chat/completions" />
         </div>
       </div>
-      <div>
-        <button type="button" id="saveKeysBtn" class="primary">Keys im Browser speichern</button>
-        <span id="saveFeedback" class="save-msg" hidden>Gespeichert!</span>
+
+      <div class="field-group">
+        <label for="cfgCustomKey">Benutzerdefiniert – API-Key (<code>carbs_custom_api_key</code>)</label>
+        <div class="key-input-wrap">
+          <input type="password" id="cfgCustomKey" placeholder="sk-... (optional bei eigenem Proxy)" />
+          <button type="button" class="eye-btn" data-target="cfgCustomKey" aria-label="Key anzeigen">👁</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="cfgCustomModel">Benutzerdefiniert – Modellname (<code>carbs_custom_api_model</code>)</label>
+        <div class="key-input-wrap">
+          <input type="text" id="cfgCustomModel" placeholder="z. B. gpt-4o-mini oder claude-haiku-5-5-20261001" />
+        </div>
+      </div>
+
+      <button type="button" id="saveKeysBtn" class="primary">Keys im Browser speichern</button>
+      <span id="saveFeedback" class="save-msg" hidden>Gespeichert!</span>
+
       </div>
   </section>
 </main>
@@ -417,7 +433,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "17.0";
+var APP_VERSION = "17.1";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1539,11 +1555,13 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ 
 <!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
 <script src="carbcam-scanner-v3.js"></script>
   <script>
-    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
+    // 1. Gespeicherte Keys in die Konfigurationsfelder laden
     const KEY_MAP = {
       cfgGroqKey: "carbs_groq_api_key",
       cfgGeminiKey: "carbs_gemini_api_key",
-      cfgClaudeKey: "carbs_claude_api_key"
+      cfgCustomUrl: "carbs_custom_api_url",
+      cfgCustomKey: "carbs_custom_api_key",
+      cfgCustomModel: "carbs_custom_api_model"
     };
 
     Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
@@ -1580,10 +1598,12 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ 
     // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
     CarbsScanner.init({
       triggerSelector: "#openCarbsScannerBtn",
-      targetInputSelector: "#ke",
+      targetInputSelector: "#mainCarbsInput",
       groqKeyStorageName: "carbs_groq_api_key",
       geminiKeyStorageName: "carbs_gemini_api_key",
-      claudeKeyStorageName: "carbs_claude_api_key",
+      customUrlStorageName: "carbs_custom_api_url",
+      customKeyStorageName: "carbs_custom_api_key",
+      customModelStorageName: "carbs_custom_api_model",
       onApply: (result) => {
         console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
       }
