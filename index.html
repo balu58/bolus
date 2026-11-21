@@ -10,30 +10,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bolus">
 <meta name="theme-color" content="#2463D6">
+<link rel="stylesheet" href="bolus-theme.css">
 <style>
 :root{
-  --bg:#EEF2F6; --surface:#FFFFFF; --ink:#16233A; --muted:#5B6678; --line:#D5DCE5;
-  --accent:#2463D6; --accent-soft:#DCE7FB; --curve:#4B93F2; --curve-fill:rgba(75,147,242,.18);
-  --red:#D93025; --red-soft:#FCE3E1; --yellow:#F5C400; --yellow-soft:#FFF6CC; --ok:#1E8E5A;
-  --nav:#FFFFFF;
-  color-scheme: light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0F1724; --surface:#18233A; --ink:#E8EEF7; --muted:#9AA7BC; --line:#2B3954;
-    --accent:#6EA2FF; --accent-soft:#22355A; --curve:#6EA2FF; --curve-fill:rgba(110,162,255,.18);
-    --red:#FF6B5E; --red-soft:#4A1F1C; --yellow:#FFD84D; --yellow-soft:#463C12; --ok:#4CC38A;
-    --nav:#18233A; color-scheme: dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0F1724; --surface:#18233A; --ink:#E8EEF7; --muted:#9AA7BC; --line:#2B3954;
-  --accent:#6EA2FF; --accent-soft:#22355A; --curve:#6EA2FF; --curve-fill:rgba(110,162,255,.18);
-  --red:#FF6B5E; --red-soft:#4A1F1C; --yellow:#FFD84D; --yellow-soft:#463C12; --ok:#4CC38A;
-  --nav:#18233A; color-scheme: dark;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
