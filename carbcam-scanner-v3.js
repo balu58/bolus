@@ -328,12 +328,56 @@
       return ((performance.now() - this.state.startTime) / 1000).toFixed(2);
     },
 
-    showStatus(msg, isError = false) {
+    createApiError(message, detailsObj) {
+      const err = new Error(message);
+      if (detailsObj !== undefined && detailsObj !== null) {
+        try {
+          err.details = typeof detailsObj === "string" ? detailsObj : JSON.stringify(detailsObj, null, 2);
+        } catch (e) {
+          err.details = String(detailsObj);
+        }
+      }
+      return err;
+    },
+
+    showStatus(msg, isError = false, details = "") {
       clearInterval(this.state.timerInterval);
       const statusBox = document.getElementById("ccStatusBox");
       statusBox.hidden = false;
       statusBox.classList.toggle("error", isError);
-      statusBox.textContent = msg;
+      statusBox.innerHTML = "";
+
+      if (isError && details) {
+        const detailsEl = document.createElement("details");
+        detailsEl.style.cursor = "pointer";
+
+        const summaryEl = document.createElement("summary");
+        summaryEl.style.listStyle = "none";
+        summaryEl.style.outline = "none";
+        summaryEl.innerHTML =
+          this.escapeHtml(msg) +
+          ' <span style="text-decoration:underline;font-weight:600;margin-left:6px;white-space:nowrap;">Details anzeigen ▾</span>';
+
+        const preEl = document.createElement("pre");
+        preEl.style.margin = "8px 0 0 0";
+        preEl.style.padding = "8px";
+        preEl.style.borderRadius = "6px";
+        preEl.style.background = "rgba(0, 0, 0, 0.07)";
+        preEl.style.fontSize = "0.78rem";
+        preEl.style.lineHeight = "1.35";
+        preEl.style.whiteSpace = "pre-wrap";
+        preEl.style.wordBreak = "break-word";
+        preEl.style.maxHeight = "160px";
+        preEl.style.overflowY = "auto";
+        preEl.style.cursor = "text";
+        preEl.textContent = details;
+
+        detailsEl.appendChild(summaryEl);
+        detailsEl.appendChild(preEl);
+        statusBox.appendChild(detailsEl);
+      } else {
+        statusBox.textContent = msg;
+      }
     },
 
     buildUserPrompt() {
@@ -394,7 +438,8 @@
         }
       } catch (err) {
         const dur = this.stopTimer();
-        this.showStatus("Fehler nach " + dur + " s: " + err.message, true);
+        const extraDetails = err && err.details ? err.details : (err && err.stack ? err.stack : "");
+        this.showStatus("Fehler nach " + dur + " s: " + err.message, true, extraDetails);
       } finally {
         analyzeBtn.disabled = false;
       }
@@ -433,7 +478,10 @@
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || "Groq HTTP " + res.status);
+        throw this.createApiError(
+          (data.error && data.error.message) || "Groq HTTP " + res.status,
+          { status: res.status, response: data }
+        );
       }
       return this.parseJsonSafe(data.choices[0].message.content);
     },
@@ -468,7 +516,10 @@
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || "Gemini HTTP " + res.status);
+        throw this.createApiError(
+          (data.error && data.error.message) || "Gemini HTTP " + res.status,
+          { status: res.status, response: data }
+        );
       }
       const rawText = data.candidates[0].content.parts[0].text;
       return this.parseJsonSafe(rawText);
@@ -520,7 +571,10 @@
 
         const data = await res.json();
         if (!res.ok) {
-          throw new Error((data.error && data.error.message) || "Custom Anthropic HTTP " + res.status);
+          throw this.createApiError(
+            (data.error && data.error.message) || "Custom Anthropic HTTP " + res.status,
+            { status: res.status, url: customUrl, model: modelName, response: data }
+          );
         }
         const textBlock = data.content.find((b) => b.type === "text");
         return this.parseJsonSafe(textBlock ? textBlock.text : "");
@@ -531,6 +585,10 @@
       if (apiKey) {
         const cleanKey = apiKey.replace(/^Bearer\s+/i, "");
         headers["Authorization"] = "Bearer " + cleanKey;
+      }
+      if (customUrl.toLowerCase().includes("openrouter.ai")) {
+        headers["HTTP-Referer"] = "https://localhost";
+        headers["X-Title"] = "CarbCam Web-App";
       }
 
       const contentParts = [{ type: "text", text: this.buildUserPrompt() }];
@@ -556,7 +614,10 @@
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || "Custom API HTTP " + res.status);
+        throw this.createApiError(
+          (data.error && data.error.message) || "Custom API HTTP " + res.status,
+          { status: res.status, url: customUrl, model: modelName, response: data }
+        );
       }
       return this.parseJsonSafe(data.choices[0].message.content);
     },
