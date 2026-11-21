@@ -41,7 +41,10 @@
       dialogUrl: defaultDialogUrl,
       groqKeyStorageName: "carbs_groq_api_key",
       geminiKeyStorageName: "carbs_gemini_api_key",
-      claudeKeyStorageName: "carbs_claude_api_key",
+      customUrlStorageName: "carbs_custom_api_url",
+      customKeyStorageName: "carbs_custom_api_key",
+      customModelStorageName: "carbs_custom_api_model",
+      defaultCustomModel: "claude-haiku-5-5-20261001",
       onApply: null
     },
 
@@ -83,6 +86,7 @@
           const modal = document.getElementById("carbcamModal");
           if (modal) {
             this.resetDialog();
+            this.updateCustomCardLabel();
             modal.showModal();
           }
         } catch (err) {
@@ -111,6 +115,23 @@
         document.body.appendChild(wrapper.firstChild);
       }
       this.state.dialogInjected = true;
+    },
+
+    updateCustomCardLabel() {
+      const sub = document.getElementById("ccCustomSubLabel");
+      if (!sub) return;
+      const url = this.getStoredKey(this.config.customUrlStorageName);
+      const model = this.getStoredKey(this.config.customModelStorageName);
+      if (url) {
+        try {
+          const host = new URL(url).hostname;
+          sub.textContent = model ? host + " (" + model + ")" : host;
+        } catch (e) {
+          sub.textContent = model || url;
+        }
+      } else {
+        sub.textContent = "Eigene API-URL & Key";
+      }
     },
 
     bindDialogEvents() {
@@ -364,10 +385,11 @@
           usedModelLabel = "GEMINI / gemini-3-flash-preview";
           const parsed = await this.callGemini();
           this.displayResult(parsed, usedModelLabel);
-        } else if (selected === "claude") {
-          this.startTimer("Claude Haiku 5.5 Analyse");
-          usedModelLabel = "ANTHROPIC / claude-haiku-5-5-20261001";
-          const parsed = await this.callClaude();
+        } else if (selected === "custom") {
+          const customModel = this.getStoredKey(this.config.customModelStorageName) || this.config.defaultCustomModel;
+          this.startTimer("Benutzerdefiniert (" + customModel + ")");
+          usedModelLabel = "BENUTZERDEFINIERT / " + customModel;
+          const parsed = await this.callCustom();
           this.displayResult(parsed, usedModelLabel);
         }
       } catch (err) {
@@ -452,48 +474,91 @@
       return this.parseJsonSafe(rawText);
     },
 
-    async callClaude() {
-      const apiKey = this.getStoredKey(this.config.claudeKeyStorageName);
-      const headers = {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      };
-      if (apiKey) {
-        headers["x-api-key"] = apiKey;
+    async callCustom() {
+      const customUrl = this.getStoredKey(this.config.customUrlStorageName);
+      if (!customUrl) {
+        throw new Error("Keine benutzerdefinierte API-URL im localStorage hinterlegt.");
+      }
+      const apiKey = this.getStoredKey(this.config.customKeyStorageName);
+      const modelName = this.getStoredKey(this.config.customModelStorageName) || this.config.defaultCustomModel;
+
+      // Automatische Erkennung: Anthropic Messages API vs. OpenAI-kompatible Chat-Completions API
+      if (customUrl.toLowerCase().includes("anthropic.com")) {
+        const headers = {
+          "Content-Type": "application/json",
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        };
+        if (apiKey) {
+          headers["x-api-key"] = apiKey;
+        }
+
+        const contentParts = [];
+        for (const img of this.state.images) {
+          contentParts.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: img.mimeType,
+              data: img.base64
+            }
+          });
+        }
+        contentParts.push({ type: "text", text: this.buildUserPrompt() });
+
+        const res = await fetch(customUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model: modelName,
+            max_tokens: 1024,
+            temperature: 0.2,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: "user", content: contentParts }]
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error((data.error && data.error.message) || "Custom Anthropic HTTP " + res.status);
+        }
+        const textBlock = data.content.find((b) => b.type === "text");
+        return this.parseJsonSafe(textBlock ? textBlock.text : "");
       }
 
-      const contentParts = [];
+      // OpenAI-kompatibler Standard (OpenAI, OpenRouter, Mistral, Ollama, eigene Proxys)
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) {
+        const cleanKey = apiKey.replace(/^Bearer\s+/i, "");
+        headers["Authorization"] = "Bearer " + cleanKey;
+      }
+
+      const contentParts = [{ type: "text", text: this.buildUserPrompt() }];
       for (const img of this.state.images) {
         contentParts.push({
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: img.mimeType,
-            data: img.base64
-          }
+          type: "image_url",
+          image_url: { url: "data:" + img.mimeType + ";base64," + img.base64 }
         });
       }
-      contentParts.push({ type: "text", text: this.buildUserPrompt() });
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(customUrl, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "claude-haiku-5-5-20261001",
-          max_tokens: 1024,
+          model: modelName,
           temperature: 0.2,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: contentParts }]
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: contentParts }
+          ]
         })
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error((data.error && data.error.message) || "Claude HTTP " + res.status);
+        throw new Error((data.error && data.error.message) || "Custom API HTTP " + res.status);
       }
-      const textBlock = data.content.find((b) => b.type === "text");
-      return this.parseJsonSafe(textBlock ? textBlock.text : "");
+      return this.parseJsonSafe(data.choices[0].message.content);
     },
 
     parseJsonSafe(rawText) {

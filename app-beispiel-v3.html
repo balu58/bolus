@@ -151,10 +151,24 @@
       </div>
 
       <div class="field-group">
-        <label for="cfgClaudeKey">Anthropic Claude API-Key – optional (<code>carbs_claude_api_key</code>)</label>
+        <label for="cfgCustomUrl">Benutzerdefiniert – API-URL (<code>carbs_custom_api_url</code>)</label>
         <div class="key-input-wrap">
-          <input type="password" id="cfgClaudeKey" placeholder="sk-ant-... (optional)" />
-          <button type="button" class="eye-btn" data-target="cfgClaudeKey" aria-label="Key anzeigen">👁</button>
+          <input type="url" id="cfgCustomUrl" placeholder="https://api.openai.com/v1/chat/completions" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="cfgCustomKey">Benutzerdefiniert – API-Key (<code>carbs_custom_api_key</code>)</label>
+        <div class="key-input-wrap">
+          <input type="password" id="cfgCustomKey" placeholder="sk-... (optional bei eigenem Proxy)" />
+          <button type="button" class="eye-btn" data-target="cfgCustomKey" aria-label="Key anzeigen">👁</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="cfgCustomModel">Benutzerdefiniert – Modellname (<code>carbs_custom_api_model</code>)</label>
+        <div class="key-input-wrap">
+          <input type="text" id="cfgCustomModel" placeholder="z. B. gpt-4o-mini oder claude-haiku-5-5-20261001" />
         </div>
       </div>
 
@@ -169,7 +183,7 @@
         <li>Die API-Keys werden nur lokal im Browser gespeichert (localStorage).</li>
         <li>Die Keys werden nicht an einen Server gesendet.</li>
         <li>Die Keys sind notwendig, um die CarbCam-Scanner-Funktionalität zu nutzen.</li>
-        <li>Der Scanner kann sowohl Groq, Google Gemini als auch Anthropic Claude verwenden.</li>
+        <li>Der Scanner kann Groq, Google Gemini sowie einen frei konfigurierbaren Anbieter (Benutzerdefiniert) verwenden.</li>
       </ul>
     </section>
   </div>
@@ -181,7 +195,9 @@
     const KEY_MAP = {
       cfgGroqKey: "carbs_groq_api_key",
       cfgGeminiKey: "carbs_gemini_api_key",
-      cfgClaudeKey: "carbs_claude_api_key"
+      cfgCustomUrl: "carbs_custom_api_url",
+      cfgCustomKey: "carbs_custom_api_key",
+      cfgCustomModel: "carbs_custom_api_model"
     };
 
     Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
@@ -221,7 +237,9 @@
       targetInputSelector: "#mainCarbsInput",
       groqKeyStorageName: "carbs_groq_api_key",
       geminiKeyStorageName: "carbs_gemini_api_key",
-      claudeKeyStorageName: "carbs_claude_api_key",
+      customUrlStorageName: "carbs_custom_api_url",
+      customKeyStorageName: "carbs_custom_api_key",
+      customModelStorageName: "carbs_custom_api_model",
       onApply: (result) => {
         console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
       }
