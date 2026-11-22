@@ -52,6 +52,11 @@ p{margin:0 0 8px}
 .key-input-wrap{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:6px}
 .key-input-wrap input{min-width:0;font-size:1rem}
 .key-input-wrap .eye-btn{font:inherit;font-size:1.1rem;border:1px solid var(--line);background:var(--bg);border-radius:12px;min-height:48px;color:var(--ink)}
+.custom-config{border:1px solid var(--line);border-radius:14px;margin:12px -16px 16px;padding:12px 16px 14px}
+.custom-config legend{padding:0 7px;color:var(--ink);font-size:.92rem;font-weight:700}
+.custom-config .field-group{margin-top:10px}
+.custom-config .field-group:first-of-type{margin-top:2px}
+.custom-config .key-placeholder{display:block;width:48px;min-height:48px}
 input.masked{-webkit-text-security:disc}
 .secretinfo{color:var(--muted);margin-top:4px;min-height:1.1em;overflow-wrap:anywhere}
 .secretinfo.warn{color:var(--red)}
@@ -340,6 +345,18 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 
   <!-- ZUGANG (private Daten, nicht Teil der Sicherung) -->
   <section id="view-key" class="hidden">
+    <div class="block" id="localStorageBlock">
+      <h2 style="margin-top:0">Lokaler Browser-Speicher</h2>
+      <p class="muted small">Exportiert alle Daten dieses Geräts aus dem Browser, einschließlich Zugangsdaten und KI-Konfiguration. Die Sicherung bleibt privat und wird niemals automatisch in die GitHub-Synchronisation übernommen.</p>
+      <div style="margin-top:10px"><label for="localBackupPassword">Passwort (optional)</label><div class="secretwrap"><input id="localBackupPassword" type="text" class="secret masked" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Nur zum Verschlüsseln oder Entschlüsseln" style="font-size:1rem"><button type="button" class="eye" data-for="localBackupPassword" aria-label="Passwort anzeigen">👁</button></div></div>
+      <p class="muted small" style="margin-top:6px">Mit Passwort wird die Datei verschlüsselt. Ohne Passwort wird eine unverschlüsselte JSON-Datei erstellt.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="primary" id="localExportBtn" style="width:auto;flex:1">Komplett exportieren</button>
+        <button class="secondary" id="localImportBtn">Komplett importieren</button>
+      </div>
+      <p class="small" id="localBackupStatus" style="margin-top:10px"></p>
+      <input type="file" id="localImportFile" accept=".json,.bolusenc,application/json" hidden>
+    </div>
     <div class="block" id="cgmBlock">
       <h2 style="margin-top:0">Glukose-Sensor (REST-API)</h2>
       <p class="muted small">Holt den aktuellen Sensorwert von deinem eigenen REST-Dienst und trägt ihn als BZ in den Rechner ein (überschreibbar, z. B. nach blutiger Messung). Nur auf diesem Gerät gespeichert, nicht Teil der Sicherung.</p>
@@ -388,27 +405,32 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         </div>
       </div>
       
-      <div class="field-group">
-        <label for="cfgCustomUrl">Benutzerdefiniert – API-URL (<code>carbs_custom_api_url</code>)</label>
-        <div class="key-input-wrap">
-          <input type="url" id="cfgCustomUrl" placeholder="https://api.openai.com/v1/chat/completions" />
+      <fieldset class="custom-config">
+        <legend>Benutzerdefiniert</legend>
+        <div class="field-group">
+          <label for="cfgCustomUrl">API-URL (<code>carbs_custom_api_url</code>)</label>
+          <div class="key-input-wrap">
+            <input type="url" id="cfgCustomUrl" placeholder="https://api.openai.com/v1/chat/completions" />
+            <span class="key-placeholder" aria-hidden="true"></span>
+          </div>
         </div>
-      </div>
 
-      <div class="field-group">
-        <label for="cfgCustomKey">Benutzerdefiniert – API-Key (<code>carbs_custom_api_key</code>)</label>
-        <div class="key-input-wrap">
-          <input type="password" id="cfgCustomKey" placeholder="sk-... (optional bei eigenem Proxy)" />
-          <button type="button" class="eye-btn" data-target="cfgCustomKey" aria-label="Key anzeigen">👁</button>
+        <div class="field-group">
+          <label for="cfgCustomKey">API-Key (<code>carbs_custom_api_key</code>)</label>
+          <div class="key-input-wrap">
+            <input type="password" id="cfgCustomKey" placeholder="sk-... (optional bei eigenem Proxy)" />
+            <button type="button" class="eye-btn" data-target="cfgCustomKey" aria-label="Key anzeigen">👁</button>
+          </div>
         </div>
-      </div>
 
-      <div class="field-group">
-        <label for="cfgCustomModel">Benutzerdefiniert – Modellname (<code>carbs_custom_api_model</code>)</label>
-        <div class="key-input-wrap">
-          <input type="text" id="cfgCustomModel" placeholder="z. B. gpt-4o-mini oder claude-haiku-5-5-20261001" />
+        <div class="field-group">
+          <label for="cfgCustomModel">Modellname (<code>carbs_custom_api_model</code>)</label>
+          <div class="key-input-wrap">
+            <input type="text" id="cfgCustomModel" placeholder="z. B. gpt-4o-mini oder claude-haiku-5-5-20261001" />
+            <span class="key-placeholder" aria-hidden="true"></span>
+          </div>
         </div>
-      </div>
+      </fieldset>
 
       <button type="button" id="saveKeysBtn" class="primary">Keys im Browser speichern</button>
       <span id="saveFeedback" class="save-msg" hidden>Gespeichert!</span>
@@ -433,7 +455,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "17.2";
+var APP_VERSION = "17.3";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1030,6 +1052,124 @@ function downloadFile(json, name){
     markBackup(); toast("Sicherung heruntergeladen");
   }catch(e){ showJson(json); }
 }
+
+// ---------- Vollständige Browser-Speicher-Sicherung ----------
+function localBackupStatus(text){
+  var elStatus = document.getElementById("localBackupStatus");
+  if(elStatus) elStatus.textContent = text;
+}
+function bytesToBase64(bytes){
+  var binary = "";
+  for(var i=0;i<bytes.length;i+=0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000));
+  return btoa(binary);
+}
+function base64ToBytes(text){
+  var binary = atob(String(text).replace(/\s/g,""));
+  var bytes = new Uint8Array(binary.length);
+  for(var i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+async function deriveLocalBackupKey(password, salt){
+  var keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt:salt, iterations:250000, hash:"SHA-256"},
+    keyMaterial,
+    {name:"AES-GCM", length:256},
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+async function exportLocalStorage(){
+  var password = document.getElementById("localBackupPassword").value;
+  var entries = [];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key = localStorage.key(i);
+      if(key !== null) entries.push({key:key, value:localStorage.getItem(key)});
+    }
+  }catch(e){
+    toast("Lokaler Speicher ist nicht verfügbar");
+    return;
+  }
+  var payload = JSON.stringify({app:"bolusrechner", version:2, kind:"localStorage", exported:new Date().toISOString(), entries:entries}, null, 2);
+  var date = new Date().toISOString().slice(0,10);
+  if(!password){
+    downloadFile(payload, "bolusrechner-browser-speicher-"+date+".json");
+    localBackupStatus(entries.length+" Schlüssel unverschlüsselt exportiert.");
+    return;
+  }
+  if(!crypto || !crypto.subtle){
+    toast("Verschlüsselung wird in diesem Browser nicht unterstützt");
+    return;
+  }
+  try{
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var key = await deriveLocalBackupKey(password, salt);
+    var encrypted = await crypto.subtle.encrypt({name:"AES-GCM", iv:iv}, key, new TextEncoder().encode(payload));
+    var envelope = JSON.stringify({
+      app:"bolusrechner",
+      version:2,
+      kind:"localStorage-encrypted",
+      cipher:"AES-GCM",
+      kdf:"PBKDF2-SHA256",
+      iterations:250000,
+      exported:new Date().toISOString(),
+      salt:bytesToBase64(salt),
+      iv:bytesToBase64(iv),
+      data:bytesToBase64(new Uint8Array(encrypted))
+    }, null, 2);
+    downloadFile(envelope, "bolusrechner-browser-speicher-"+date+".bolusenc");
+    localBackupStatus(entries.length+" Schlüssel verschlüsselt exportiert.");
+  }catch(e){
+    toast("Verschlüsselung fehlgeschlagen");
+  }
+}
+async function readLocalBackup(text){
+  var password = document.getElementById("localBackupPassword").value;
+  var envelope;
+  try{ envelope = JSON.parse(text); }catch(e){ throw new Error("invalid"); }
+  if(envelope.kind === "localStorage") return envelope;
+  if(envelope.kind !== "localStorage-encrypted") throw new Error("invalid");
+  if(!password) throw new Error("password");
+  if(!crypto || !crypto.subtle) throw new Error("unsupported");
+  var salt = base64ToBytes(envelope.salt);
+  var iv = base64ToBytes(envelope.iv);
+  var key = await deriveLocalBackupKey(password, salt);
+  var decrypted = await crypto.subtle.decrypt({name:"AES-GCM", iv:iv}, key, base64ToBytes(envelope.data));
+  var payload = JSON.parse(new TextDecoder().decode(decrypted));
+  if(payload.kind !== "localStorage") throw new Error("invalid");
+  return payload;
+}
+function confirmLocalImport(payload){
+  if(!payload || payload.app !== "bolusrechner" || payload.kind !== "localStorage" || !Array.isArray(payload.entries)){
+    toast("Das ist keine gültige Browser-Speicher-Sicherung");
+    return;
+  }
+  var valid = payload.entries.every(function(entry){ return entry && typeof entry.key === "string" && typeof entry.value === "string"; });
+  if(!valid){
+    toast("Die Sicherung enthält ungültige Einträge");
+    return;
+  }
+  openDlg(function(d){
+    d.appendChild(el("h2",{style:"margin-top:0"},"Browser-Speicher wiederherstellen"));
+    d.appendChild(el("p",{class:"small"},"Die Sicherung enthält "+payload.entries.length+" Schlüssel. Der gesamte aktuelle lokale Browser-Speicher wird dabei ersetzt."));
+    d.appendChild(el("p",{class:"small muted"},"Die App wird anschließend neu geladen."));
+    d.appendChild(actions("Jetzt ersetzen", function(){
+      try{
+        localStorage.clear();
+        for(var i=0;i<payload.entries.length;i++){
+          localStorage.setItem(payload.entries[i].key, payload.entries[i].value);
+        }
+        closeDlg();
+        localBackupStatus(payload.entries.length+" Schlüssel wiederhergestellt.");
+        setTimeout(function(){ location.reload(); }, 200);
+      }catch(e){
+        toast("Wiederherstellung fehlgeschlagen");
+      }
+    }, true));
+  });
+}
 function showJson(json){
   openDlg(function(d){
     d.appendChild(el("h2",{style:"margin-top:0"},"Daten sichern"));
@@ -1509,6 +1649,35 @@ document.getElementById("profAdd").addEventListener("click", function(){
   persist("settings"); renderSettings(); toast("Punkt bei "+m+" Min. angelegt, bitte Wert anpassen");
 });
 document.getElementById("exportBtn").addEventListener("click", exportData);
+document.getElementById("localExportBtn").addEventListener("click", exportLocalStorage);
+document.getElementById("localImportBtn").addEventListener("click", function(){
+  document.getElementById("localImportFile").value = "";
+  document.getElementById("localImportFile").click();
+});
+document.getElementById("localImportFile").addEventListener("change", function(){
+  var file = this.files && this.files[0];
+  if(!file) return;
+  localBackupStatus("Datei wird gelesen...");
+  var reader = new FileReader();
+  reader.onload = async function(){
+    try{
+      var payload = await readLocalBackup(String(reader.result));
+      confirmLocalImport(payload);
+    }catch(e){
+      if(e && e.message === "password"){
+        toast("Für diese verschlüsselte Sicherung ist ein Passwort erforderlich");
+        localBackupStatus("Passwort eingeben und Datei erneut auswählen.");
+      }else if(e && (e.name === "OperationError" || e.message === "invalid")){
+        toast("Passwort falsch oder Sicherung ungültig");
+        localBackupStatus("Wiederherstellung fehlgeschlagen.");
+      }else{
+        toast("Diese Datei konnte nicht gelesen werden");
+        localBackupStatus("Wiederherstellung fehlgeschlagen.");
+      }
+    }
+  };
+  reader.readAsText(file);
+});
 document.getElementById("slotAdd").addEventListener("click", function(){
   var S = state.settings, base = S.slots[ui.slot] || S.slots[0];
   S.slots.push({name:"Zwischenmahlzeit", from:hhmm(new Date()).slice(0,3)+"00", ziel:base.ziel, korr:base.korr, ke:base.ke});
