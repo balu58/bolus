@@ -57,6 +57,8 @@ p{margin:0 0 8px}
 .custom-config .field-group{margin-top:10px}
 .custom-config .field-group:first-of-type{margin-top:2px}
 .custom-config .key-placeholder{display:block;width:48px;min-height:48px}
+.local-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+.file-import-label{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 16px;border-radius:12px;cursor:pointer}
 input.masked{-webkit-text-security:disc}
 .secretinfo{color:var(--muted);margin-top:4px;min-height:1.1em;overflow-wrap:anywhere}
 .secretinfo.warn{color:var(--red)}
@@ -352,10 +354,10 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
       <p class="muted small" style="margin-top:6px">Mit Passwort wird die Datei verschlüsselt. Ohne Passwort wird eine unverschlüsselte JSON-Datei erstellt.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="primary" id="localExportBtn" style="width:auto;flex:1">Komplett exportieren</button>
-        <button class="secondary" id="localImportBtn">Komplett importieren</button>
+        <label class="secondary file-import-label" for="localImportFile" id="localImportBtn">Komplett importieren</label>
       </div>
       <p class="small" id="localBackupStatus" style="margin-top:10px"></p>
-      <input type="file" id="localImportFile" accept=".json,.bolusenc,application/json" hidden>
+      <input type="file" id="localImportFile" class="local-file-input" accept="*/*,.json,.bolusenc,application/json,text/plain" aria-label="Browser-Speicher-Sicherung auswählen">
     </div>
     <div class="block" id="cgmBlock">
       <h2 style="margin-top:0">Glukose-Sensor (REST-API)</h2>
@@ -455,7 +457,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "17.3";
+var APP_VERSION = "17.4";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1650,13 +1652,10 @@ document.getElementById("profAdd").addEventListener("click", function(){
 });
 document.getElementById("exportBtn").addEventListener("click", exportData);
 document.getElementById("localExportBtn").addEventListener("click", exportLocalStorage);
-document.getElementById("localImportBtn").addEventListener("click", function(){
-  document.getElementById("localImportFile").value = "";
-  document.getElementById("localImportFile").click();
-});
 document.getElementById("localImportFile").addEventListener("change", function(){
   var file = this.files && this.files[0];
   if(!file) return;
+  var input = this;
   localBackupStatus("Datei wird gelesen...");
   var reader = new FileReader();
   reader.onload = async function(){
@@ -1667,6 +1666,9 @@ document.getElementById("localImportFile").addEventListener("change", function()
       if(e && e.message === "password"){
         toast("Für diese verschlüsselte Sicherung ist ein Passwort erforderlich");
         localBackupStatus("Passwort eingeben und Datei erneut auswählen.");
+      }else if(e && e.message === "unsupported"){
+        toast("Verschlüsselung wird in diesem Browser nicht unterstützt");
+        localBackupStatus("Öffne die App über HTTPS.");
       }else if(e && (e.name === "OperationError" || e.message === "invalid")){
         toast("Passwort falsch oder Sicherung ungültig");
         localBackupStatus("Wiederherstellung fehlgeschlagen.");
@@ -1674,6 +1676,8 @@ document.getElementById("localImportFile").addEventListener("change", function()
         toast("Diese Datei konnte nicht gelesen werden");
         localBackupStatus("Wiederherstellung fehlgeschlagen.");
       }
+    }finally{
+      input.value = "";
     }
   };
   reader.readAsText(file);
