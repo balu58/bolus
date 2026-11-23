@@ -211,9 +211,9 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
         <div><div class="lblrow"><label for="ke">KE</label><button type="button" class="linkbtn" id="openCarbsScannerBtn">aus Foto</button><button type="button" class="linkbtn" id="kePick"> Essentabelle</button></div><input id="ke" inputmode="decimal" autocomplete="off" placeholder="z. B. 4,2*0,88">
           <div class="exprhint" id="keHint"></div></div>
         <div class="kerow">
-          <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button" data-ins="+"
-              aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button><button type="button"
-              data-ins="/" aria-label="geteilt">÷</button><button type="button" data-ins="("
+          <div class="kebtns"><button type="button" data-ins="*" aria-label="mal">×</button><button type="button"
+              data-ins="/" aria-label="geteilt">÷</button><button type="button" data-ins="+"
+              aria-label="plus">+</button><button type="button" data-ins="-" aria-label="minus">−</button><button type="button" data-ins="("
               aria-label="Klammer auf">(</button><button type="button" data-ins=")" aria-label="Klammer zu">)</button></div>
           <div class="calcitems" id="keItems"></div></div>
         <div class="pctfield"><label for="pct">Auf-/Abschlag (%)</label>
@@ -460,7 +460,7 @@ textarea{width:100%;min-height:140px;font:inherit;font-size:.85rem;background:va
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "17.5";
+var APP_VERSION = "17.6";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
@@ -1558,6 +1558,7 @@ function saveEntry(u, keEat, bzIn){
   ui.basket=[]; renderBasket();
   ui.slotManual=false;
   renderAll(); toast((u>0?fmt(u)+" IE":fmt(keEat)+" KE")+" um "+hhmm(d)+" gespeichert");
+  setTimeout(function(){ window.scrollTo(0,0); }, 3000);
 }
 document.getElementById("injU").addEventListener("input", function(e){ e.target.classList.remove("missing"); ui.injUDirty = e.target.value.trim()!==""; renderCalc(); });
 document.getElementById("foodSearch").addEventListener("input", renderFoods);
