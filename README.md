@@ -26,7 +26,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
     Wirkmaximum und Wirkdauer einstellbar – für einen Insulinwechsel ohne eigene Messreihe
   - Umschalter „Eigene | Fiasp | Standard“, Vergleichstabelle aller drei Modelle in den Einstellungen
 - **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
-- **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`
+- **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`; verwendete Formeln werden mit dem Eintrag gespeichert, in der Historie angezeigt und auf andere Geräte synchronisiert
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
 - **Verlauf** mit einstellbarer Aufbewahrung (Einstellungen → Verlauf, Standard 3 Tage, bis 365)
 - **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
