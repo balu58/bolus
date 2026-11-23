@@ -194,6 +194,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .cc-total-label {
     font-size: 1.02rem;
@@ -209,6 +211,13 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .cc-result-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
   .cc-items-list {
     display: flex;
     flex-direction: column;
@@ -219,6 +228,26 @@
     grid-template-columns: 1.8fr 1fr 0.9fr 24px;
     gap: 6px;
     align-items: center;
+  }
+  .cc-item-row.cc-item-readonly {
+    grid-template-columns: 1.8fr 1fr 0.9fr;
+    align-items: start;
+  }
+  .cc-item-label {
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid var(--line, #D5DCE5);
+    border-radius: 6px;
+    background: var(--ok-soft, #E6F4EA);
+    color: var(--ink, #16233A);
+    overflow-wrap: anywhere;
+  }
+  .cc-item-name {
+    font-weight: 500;
+  }
+  .cc-item-value {
+    white-space: nowrap;
   }
   .cc-item-row input {
     width: 100%;
@@ -358,7 +387,10 @@
     <div id="ccResultSection" class="cc-result-section" hidden>
       <div class="cc-result-header">
         <span class="cc-total-label">Gesamt: <strong id="ccTotalCarbs">0</strong> g Kohlenhydrate</span>
-        <button type="button" id="ccAddRowBtn" class="cc-btn-small">+ Zutat</button>
+        <div class="cc-result-actions">
+          <button type="button" id="ccEditToggleBtn" class="cc-btn-small" aria-pressed="false" aria-controls="ccItemsList">Werte korrigieren</button>
+          <button type="button" id="ccAddRowBtn" class="cc-btn-small" hidden>+ Zutat</button>
+        </div>
       </div>
       <div id="ccItemsList" class="cc-items-list"></div>
       <p id="ccAnalysisNote" class="cc-note"></p>

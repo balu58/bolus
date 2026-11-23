@@ -52,6 +52,7 @@
       provider: "groq",
       images: [],
       items: [],
+      editingItems: false,
       timerInterval: null,
       startTime: 0,
       dialogInjected: false,
@@ -180,6 +181,9 @@
       galleryInput.addEventListener("change", (e) => this.handleFiles(e.target.files));
 
       document.getElementById("ccAnalyzeBtn").addEventListener("click", () => this.runAnalysis());
+      document.getElementById("ccEditToggleBtn").addEventListener("click", () => {
+        this.setItemsEditing(!this.state.editingItems);
+      });
       document.getElementById("ccAddRowBtn").addEventListener("click", () => {
         this.state.items.push({
           name: "Weitere Zutat",
@@ -217,6 +221,7 @@
       this.state.images = [];
       this.state.items = [];
       this.renderPreviews();
+      this.setItemsEditing(false);
       document.getElementById("ccUserTip").value = "";
       document.getElementById("ccStatusBox").hidden = true;
       document.getElementById("ccResultSection").hidden = true;
@@ -650,7 +655,7 @@
         };
       });
 
-      this.renderItems();
+      this.setItemsEditing(false);
 
       document.getElementById("ccAnalysisNote").textContent = parsed.hinweis || "";
       const totalKB = this.state.images.reduce((acc, i) => acc + i.sizeKB, 0);
@@ -673,6 +678,34 @@
           item.trockengewicht_gramm != null && item.trockengewicht_gramm > 0
             ? "(tr: " + Math.round(item.trockengewicht_gramm) + "g)"
             : "";
+
+        if (!this.state.editingItems) {
+          row.classList.add("cc-item-readonly");
+          const name = document.createElement("span");
+          name.className = "cc-item-label cc-item-name";
+          name.textContent = item.name;
+
+          const weightCell = document.createElement("div");
+          weightCell.className = "cc-weight-cell";
+          const weight = document.createElement("span");
+          weight.className = "cc-item-label cc-item-value";
+          weight.textContent = Math.round(item.gewicht_gramm) + " g";
+          const dryTag = document.createElement("span");
+          dryTag.className = "cc-dry-tag";
+          dryTag.textContent = dryText;
+          weightCell.appendChild(weight);
+          weightCell.appendChild(dryTag);
+
+          const carbs = document.createElement("span");
+          carbs.className = "cc-item-label cc-item-value";
+          carbs.textContent = Math.round(item.kohlenhydrate_gramm) + " g";
+
+          row.appendChild(name);
+          row.appendChild(weightCell);
+          row.appendChild(carbs);
+          container.appendChild(row);
+          return;
+        }
 
         row.innerHTML =
           '<input type="text" class="cc-in-name" value="' + this.escapeHtml(item.name) + '" aria-label="Zutat" />' +
@@ -723,6 +756,15 @@
       });
 
       this.updateTotalDisplay();
+    },
+
+    setItemsEditing(editing) {
+      this.state.editingItems = editing;
+      const toggle = document.getElementById("ccEditToggleBtn");
+      toggle.textContent = editing ? "Fertig" : "Werte korrigieren";
+      toggle.setAttribute("aria-pressed", String(editing));
+      document.getElementById("ccAddRowBtn").hidden = !editing;
+      this.renderItems();
     },
 
     calculateTotalCarbs() {
