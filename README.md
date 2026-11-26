@@ -11,7 +11,11 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 |:---:|:---:|:---:|:---:|
 | <img src="screenshots/1-rechner.png" width="200" alt="Rechner mit Bolusvorschlag"> | <img src="screenshots/2-essen.png" width="200" alt="Mahlzeit zusammenstellen"> | <img src="screenshots/3-verlauf.png" width="200" alt="Verlauf der Injektionen"> | <img src="screenshots/4-einstellungen.png" width="200" alt="Insulin/Kohlenhydrat-Verhältnisse und Einstellungen"> |
 
-*Beispieldaten: 7,5 IE um 11:02, Abfrage um 12:40, BZ 172, KE als Formel `4,2*0,88`.*
+*Die Bilder zeigen Beispieldaten, keine persönlichen Werte. Im Rechnerbeispiel: BZ 172 mg/dl und KE-Formel `4,2*0,88`.*
+
+**Carb-API-Konfiguration importieren (Beispielseite):**
+
+<img src="screenshots/5-carb-import.png" width="480" alt="Import der lokalen Carb-API-Konfiguration mit Passwortfeld">
 
 ## Funktionen
 
@@ -28,10 +32,19 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 - **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`; verwendete Formeln werden mit dem Eintrag gespeichert, in der Historie angezeigt und auf andere Geräte synchronisiert
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
-- **Verlauf** mit einstellbarer Aufbewahrung (Einstellungen → Verlauf, Standard 3 Tage, bis 365)
+- **Carb-Scanner** zur Erkennung von Kohlenhydraten aus Fotos; dieselbe Scanner-Logik wird von der App und der [Beispielseite](app-beispiel-v3.html) verwendet
+- **Verlauf** mit einstellbarer Aufbewahrung (Einstellungen → Verlauf, Standard 3 Tage, bis 365); „Verlauf auf diesem Gerät leeren“ löscht nur die lokale Kopie. Synchronisierte Einträge können beim nächsten Abgleich zurückkehren
 - **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
 - **Glukose-Sensor** über eigenen REST-Dienst: Anzeige mit Trendpfeil, automatische Übernahme als BZ
-- **Sicherung** aller Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
+- **Datensicherung** der App-Daten als JSON-Datei (z. B. nach OneDrive), Wiederherstellen per Datei
+- **Browser-Speicher-Sicherung** optional verschlüsselt; daraus lassen sich auf der Beispielseite nur die Carb-API-Schlüssel übernehmen oder in der App die komplette lokale Konfiguration ersetzen
+
+## Sicherung und Import
+
+- **Normale Datensicherung** (Einstellungen → Sicherung) enthält App-Daten wie Einstellungen, Lebensmittel und Verlauf. API-Konfiguration und Zugangsdaten sind darin nicht enthalten.
+- **Browser-Speicher-Sicherung** (Zugang → Lokaler Browser-Speicher) exportiert alle lokalen Speicherwerte einschließlich Carb-API-Schlüsseln und Synchronisations-Zugangsdaten. Mit einem Passwort wird die Sicherung verschlüsselt; ohne Passwort ist die JSON-Datei unverschlüsselt.
+- **Selektiver Carb-Import:** `app-beispiel-v3.html` liest eine Browser-Speicher-Sicherung und übernimmt daraus nur die Carb-API-Konfiguration. Andere lokale Daten bleiben unverändert. Eine normale Datensicherung enthält diese Schlüssel nicht.
+- **Kompletter Import:** Die Wiederherstellung des Browser-Speichers in der App ersetzt den gesamten lokalen Speicher dieses Geräts. Dabei werden bestehende Einträge und Zugangsdaten durch die Inhalte der Sicherung ersetzt.
 
 ## Synchronisation zwischen Geräten (GitHub)
 
@@ -145,8 +158,14 @@ Werte älter als 15 Minuten werden grau dargestellt und nicht mehr in den Rechne
 
 | Datei | Zweck |
 |---|---|
-| `index.html` | die komplette App (HTML, CSS, JavaScript) |
-| `sw.js` | Service Worker für den Offline-Betrieb |
+| `index.html` | App-Struktur und Bereiche |
+| `app.js` | Rechner, Verlauf, Synchronisation und App-Verhalten |
+| `storage.js` | lokales Speichern, Carb-API-Konfiguration und Backup-Import |
+| `bolus-theme.css` | gemeinsames Erscheinungsbild für App und Beispielseite |
+| `carb-scanner-v3.js` | wiederverwendbare Carb-Scanner-Logik |
+| `carb-dialog-v3.html` | Dialog des Carb-Scanners |
+| `app-beispiel-v3.html` | Integration des Scanners und selektiver Import der Carb-API-Konfiguration |
+| `sw.js` | Service Worker und Precache für den Offline-Betrieb |
 | `manifest.webmanifest` | Name und Symbol für den Home-Bildschirm |
 | `icon-*.png` | App-Symbole |
 | `screenshots/` | Bilder für diese README (werden von der App nicht benötigt) |
@@ -161,31 +180,31 @@ Werte älter als 15 Minuten werden grau dargestellt und nicht mehr in den Rechne
 
 ## Neue Version veröffentlichen
 
-1. Änderungen an `index.html` vornehmen.
-2. In `index.html` die Versionsnummer anpassen: `var APP_VERSION = "11";`
-   - **neue Funktionen:** nächste ganze Zahl, z. B. `"11"` → `"12"`
-   - **Fehlerkorrekturen:** Unterversion, z. B. `"11"` → `"11.1"` → `"11.2"`
-   Die Nummer wird oben in der App angezeigt und sorgt dafür, dass das iPhone die neue Fassung lädt
-   (`sw.js` muss dafür nicht geändert werden).
-3. Commit und Push. GitHub Pages aktualisiert die Seite automatisch.
+1. Die Änderung in der passenden Datei vornehmen (`index.html`, `app.js`, `storage.js` oder den Carb-Dateien).
+2. `APP_VERSION` in `app.js` für die Veröffentlichung erhöhen (aktuell `18.0`). Der Wert wird auch an den Service Worker übergeben und erzeugt einen neuen Offline-Cache.
+3. Werden Offline-Dateien hinzugefügt oder entfernt, die Precache-Liste `FILES` in `sw.js` entsprechend anpassen.
+4. Commit und Push auf den von GitHub Pages verwendeten Branch. Pages veröffentlicht die neue Fassung automatisch.
 
 ## Lokal testen
 
 Am einfachsten mit einem lokalen Webserver, da beim Öffnen per Doppelklick (`file://`)
-Manifest und Service Worker nicht funktionieren:
+Manifest und Service Worker nicht funktionieren. Die App muss über HTTPS oder `localhost` geöffnet werden:
 
 - VS Code: Erweiterung **Live Server** → Rechtsklick auf `index.html` → „Open with Live Server“
-- oder: `python -m http.server` im Projektordner, dann `http://localhost:8000`
+- oder: `python -m http.server 3000` im Projektordner, dann `http://localhost:3000`
 
 iPhone-Größen in den Browser-Entwicklertools (F12 → Strg+Umschalt+M):
 iPhone 17 = 402 × 874, iPhone XR = 414 × 896.
 
+Für einen iPhone-Test über das Notebook muss die App über eine HTTPS-Adresse erreichbar sein, deren Zertifikat das iPhone vertraut. `localhost` auf dem iPhone bezeichnet das iPhone selbst, nicht das Notebook.
+
 ## Datenschutz
 
-Alle Daten (Einstellungen, Injektionen, Lebensmittel) liegen im Browser des Geräts.
-Nur wenn die Synchronisation eingerichtet ist, werden sie zusätzlich in **dein privates
-Daten-Repository** auf GitHub geschrieben – sonst sendet die App nichts an einen Server. Sicherungsdateien (`bolusrechner-*.json`) gehören
-**nicht** ins Repository und sind deshalb in `.gitignore` ausgeschlossen.
+Einstellungen, Verlauf, Lebensmittelliste und API-Konfiguration liegen im Browser des Geräts.
+Wenn die GitHub-Synchronisation eingerichtet ist, werden App-Daten zusätzlich in **dein privates
+Daten-Repository** geschrieben. Beim Carb-Scan wird das ausgewählte Foto an den konfigurierten API-Anbieter gesendet; prüfe dessen Datenschutzbedingungen.
+
+Die normale JSON-Datensicherung enthält keine API- oder Synchronisations-Zugangsdaten. Die Browser-Speicher-Sicherung enthält dagegen alle lokalen Speicherwerte. Ohne gesetztes Passwort ist sie unverschlüsselt; verschlüssele sie vor dem Ablegen oder Teilen. Sicherungsdateien (`bolusrechner-*.json` und `.bolusenc`) gehören **nicht** ins Repository und sind deshalb in `.gitignore` ausgeschlossen.
 
 ## Lizenz
 

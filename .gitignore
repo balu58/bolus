@@ -1,6 +1,7 @@
 # Datensicherungen der App – enthalten Gesundheitsdaten, niemals hochladen!
 bolusrechner-*.json
 *.backup.json
+*.bolusenc
 
 # Visual Studio / VS Code
 .vs/
