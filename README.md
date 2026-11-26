@@ -17,6 +17,10 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 
 <img src="screenshots/5-carb-import.png" width="480" alt="Import der lokalen Carb-API-Konfiguration mit Passwortfeld">
 
+**Carb-Scanner im Rechner:** Neben **KE** auf **aus Foto** tippen, um den Dialog zu öffnen.
+
+<img src="screenshots/6-carb-scan-dialog.png" width="480" alt="Geöffneter Carb-Foto-Dialog im Bolusrechner">
+
 ## Funktionen
 
 - **Bolusvorschlag** aus BZ, KE und Profil (BZ-Ziel, Korrekturfaktor, KE-Faktor)
@@ -32,7 +36,7 @@ Bolusrechner für schnell wirksames Insulin als Web-App für das iPhone. Läuft 
 - **Insulin/Kohlenhydrat-Verhältnisse** je Tageszeit frei benennbar, hinzufügen/entfernen, automatische Auswahl nach Uhrzeit
 - **KE-Eingabe mit Formeln**, z. B. `4,2*0,88`; verwendete Formeln werden mit dem Eintrag gespeichert, in der Historie angezeigt und auf andere Geräte synchronisiert
 - **Lebensmittelliste**, Mahlzeiten-Korb und Rezeptrechner (KE pro Stück)
-- **Carb-Scanner** zur Erkennung von Kohlenhydraten aus Fotos; dieselbe Scanner-Logik wird von der App und der [Beispielseite](app-beispiel-v3.html) verwendet
+- **Carb-Scanner** zur Erkennung von Kohlenhydraten aus Fotos (Rechner → KE → „aus Foto“); dieselbe Scanner-Logik wird von der App und der [Beispielseite](app-beispiel-v3.html) verwendet
 - **Verlauf** mit einstellbarer Aufbewahrung (Einstellungen → Verlauf, Standard 3 Tage, bis 365); „Verlauf auf diesem Gerät leeren“ löscht nur die lokale Kopie. Synchronisierte Einträge können beim nächsten Abgleich zurückkehren
 - **Synchronisation** zwischen Geräten über ein privates GitHub-Repository (Tab **Zugang** – Zugangsdaten sind getrennt von den gesicherten Daten)
 - **Glukose-Sensor** über eigenen REST-Dienst: Anzeige mit Trendpfeil, automatische Übernahme als BZ
