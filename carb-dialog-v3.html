@@ -1,5 +1,5 @@
 <style>
-  #carbcamModal.cc-modal {
+  #carbModal.carb-modal {
     border: 1px solid var(--line, #D5DCE5);
     border-radius: 14px;
     padding: 0;
@@ -12,10 +12,10 @@
     font-size: 16px;
     line-height: 1.45;
   }
-  #carbcamModal.cc-modal::backdrop {
+  #carbModal.carb-modal::backdrop {
     background: rgba(15, 23, 42, 0.6);
   }
-  .cc-container {
+  .carb-container {
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -24,20 +24,20 @@
     max-height: 92vh;
     box-sizing: border-box;
   }
-  .cc-header {
+  .carb-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--line, #D5DCE5);
     padding-bottom: 10px;
   }
-  .cc-title {
+  .carb-title {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--ink, #16233A);
   }
-  .cc-icon-btn {
+  .carb-icon-btn {
     background: transparent;
     border: none;
     font-size: 1.5rem;
@@ -46,17 +46,17 @@
     color: var(--muted, #5B6678);
     padding: 0 4px;
   }
-  .cc-models {
+  .carb-models {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
   @media (max-width: 520px) {
-    .cc-models {
+    .carb-models {
       grid-template-columns: 1fr;
     }
   }
-  .cc-model-card {
+  .carb-model-card {
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -68,51 +68,51 @@
     user-select: none;
     transition: border-color 0.15s, background 0.15s;
   }
-  .cc-model-card.active {
+  .carb-model-card.active {
     border-color: var(--accent, #2463D6);
     background: var(--accent-soft, #DCE7FB);
   }
-  .cc-model-card input[type="radio"] {
+  .carb-model-card input[type="radio"] {
     display: none;
   }
-  .cc-model-name {
+  .carb-model-name {
     font-weight: 700;
     font-size: 0.88rem;
     color: var(--ink, #16233A);
   }
-  .cc-model-sub {
+  .carb-model-sub {
     font-size: 0.74rem;
     color: var(--muted, #5B6678);
     word-break: break-word;
   }
-  .cc-upload-section {
+  .carb-upload-section {
     border: 1.5px dashed var(--line, #D5DCE5);
     border-radius: 10px;
     padding: 12px;
     background: var(--bg, #EEF2F6);
     text-align: center;
   }
-  .cc-upload-actions {
+  .carb-upload-actions {
     display: flex;
     justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
   }
-  .cc-hint-text {
+  .carb-hint-text {
     font-size: 0.78rem;
     color: var(--muted, #5B6678);
     margin: 8px 0 0;
   }
-  .cc-preview-grid {
+  .carb-preview-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     margin-top: 10px;
   }
-  .cc-preview-grid:empty {
+  .carb-preview-grid:empty {
     display: none;
   }
-  .cc-thumb-wrap {
+  .carb-thumb-wrap {
     position: relative;
     border-radius: 8px;
     overflow: hidden;
@@ -120,13 +120,13 @@
     aspect-ratio: 4 / 3;
     background: #000;
   }
-  .cc-thumb-wrap img {
+  .carb-thumb-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
   }
-  .cc-thumb-badge {
+  .carb-thumb-badge {
     position: absolute;
     left: 4px;
     bottom: 4px;
@@ -136,7 +136,7 @@
     padding: 2px 5px;
     border-radius: 4px;
   }
-  .cc-thumb-remove {
+  .carb-thumb-remove {
     position: absolute;
     top: 4px;
     right: 4px;
@@ -150,17 +150,17 @@
     line-height: 1;
     cursor: pointer;
   }
-  .cc-tip-section {
+  .carb-tip-section {
     display: flex;
     flex-direction: column;
     gap: 5px;
   }
-  .cc-label {
+  .carb-label {
     font-size: 0.84rem;
     font-weight: 600;
     color: var(--ink, #16233A);
   }
-  .cc-input {
+  .carb-input {
     width: 100%;
     box-sizing: border-box;
     padding: 9px 11px;
@@ -170,7 +170,7 @@
     background: var(--bg, #EEF2F6);
     color: var(--ink, #16233A);
   }
-  .cc-status {
+  .carb-status {
     padding: 10px 12px;
     border-radius: 8px;
     font-size: 0.85rem;
@@ -178,18 +178,18 @@
     color: var(--ink, #16233A);
     border: 1px solid var(--accent, #2463D6);
   }
-  .cc-status.error {
+  .carb-status.error {
     background: var(--red-soft, #FCE3E1);
     color: var(--red, #D93025);
     border-color: var(--red, #D93025);
   }
-  .cc-result-section {
+  .carb-result-section {
     background: var(--ok-soft, #E6F4EA);
     border: 1px solid var(--ok, #1E8E5A);
     border-radius: 10px;
     padding: 12px;
   }
-  .cc-result-header {
+  .carb-result-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -197,11 +197,11 @@
     gap: 8px;
     flex-wrap: wrap;
   }
-  .cc-total-label {
+  .carb-total-label {
     font-size: 1.02rem;
     color: var(--ink, #16233A);
   }
-  .cc-btn-small {
+  .carb-btn-small {
     background: transparent;
     border: 1px solid var(--ok, #1E8E5A);
     color: var(--ok, #1E8E5A);
@@ -211,29 +211,29 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .cc-result-actions {
+  .carb-result-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
     flex-wrap: wrap;
   }
-  .cc-items-list {
+  .carb-items-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  .cc-item-row {
+  .carb-item-row {
     display: grid;
     grid-template-columns: 1.8fr 1fr 0.9fr 24px;
     gap: 6px;
     align-items: center;
   }
-  .cc-item-row.cc-item-readonly {
+  .carb-item-row.carb-item-readonly {
     grid-template-columns: 1.8fr 1fr 0.9fr;
     align-items: start;
   }
-  .cc-item-label {
+  .carb-item-label {
     min-width: 0;
     box-sizing: border-box;
     padding: 9px 10px;
@@ -243,13 +243,13 @@
     color: var(--ink, #16233A);
     overflow-wrap: anywhere;
   }
-  .cc-item-name {
+  .carb-item-name {
     font-weight: 500;
   }
-  .cc-item-value {
+  .carb-item-value {
     white-space: nowrap;
   }
-  .cc-item-row input {
+  .carb-item-row input {
     width: 100%;
     box-sizing: border-box;
     padding: 6px 7px;
@@ -259,21 +259,21 @@
     background: var(--surface, #FFFFFF);
     color: var(--ink, #16233A);
   }
-  .cc-weight-cell {
+  .carb-weight-cell {
     display: flex;
     flex-direction: column;
   }
-  .cc-dry-tag {
+  .carb-dry-tag {
     font-size: 0.7rem;
     color: var(--ok, #1E8E5A);
     margin-top: 1px;
   }
-  .cc-carbs-cell {
+  .carb-carbs-cell {
     display: flex;
     align-items: center;
     gap: 3px;
   }
-  .cc-del-row {
+  .carb-del-row {
     background: none;
     border: none;
     color: var(--red, #D93025);
@@ -282,24 +282,24 @@
     cursor: pointer;
     padding: 0;
   }
-  .cc-note {
+  .carb-note {
     font-size: 0.8rem;
     color: var(--ink, #16233A);
     margin: 8px 0 4px;
   }
-  .cc-timing {
+  .carb-timing {
     font-size: 0.74rem;
     color: var(--muted, #5B6678);
     margin: 0;
   }
-  .cc-footer {
+  .carb-footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--line, #D5DCE5);
   }
-  .cc-btn {
+  .carb-btn {
     padding: 9px 14px;
     border-radius: 8px;
     border: none;
@@ -307,28 +307,28 @@
     font-size: 0.88rem;
     cursor: pointer;
   }
-  .cc-btn:disabled {
+  .carb-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  .cc-btn-dark {
+  .carb-btn-dark {
     background: var(--accent, #2463D6);
     color: #fff;
   }
-  .cc-btn-light {
+  .carb-btn-light {
     background: var(--surface, #FFFFFF);
     color: var(--ink, #16233A);
     border: 1px solid var(--line, #D5DCE5);
   }
-  .cc-btn-primary {
+  .carb-btn-primary {
     background: var(--accent, #2463D6);
     color: #fff;
   }
-  .cc-btn-success {
+  .carb-btn-success {
     background: var(--ok, #1E8E5A);
     color: #fff;
   }
-  .cc-disclaimer {
+  .carb-disclaimer {
     font-size: 0.72rem;
     color: var(--muted, #5B6678);
     margin: 0;
@@ -336,74 +336,74 @@
   }
 </style>
 
-<dialog id="carbcamModal" class="cc-modal">
-  <div class="cc-container">
-    <div class="cc-header">
-      <h3 class="cc-title">Kohlenhydrate per Foto erfassen</h3>
-      <button type="button" id="ccCloseTopBtn" class="cc-icon-btn" aria-label="Schließen">&times;</button>
+<dialog id="carbModal" class="carb-modal">
+  <div class="carb-container">
+    <div class="carb-header">
+      <h3 class="carb-title">Kohlenhydrate per Foto erfassen</h3>
+      <button type="button" id="carbCloseTopBtn" class="carb-icon-btn" aria-label="Schließen">&times;</button>
     </div>
 
-    <div class="cc-models" role="radiogroup" aria-label="KI-Modell wählen">
-      <label class="cc-model-card active" data-provider="groq">
-        <input type="radio" name="ccProvider" value="groq" checked />
-        <span class="cc-model-name">Blitz-Scan (~1,5 s)</span>
-        <span class="cc-model-sub">Groq Qwen 3.8 + Fallback</span>
+    <div class="carb-models" role="radiogroup" aria-label="KI-Modell wählen">
+      <label class="carb-model-card active" data-provider="groq">
+        <input type="radio" name="carbProvider" value="groq" checked />
+        <span class="carb-model-name">Blitz-Scan (~1,5 s)</span>
+        <span class="carb-model-sub">Groq Qwen 3.8 + Fallback</span>
       </label>
-      <label class="cc-model-card" data-provider="gemini">
-        <input type="radio" name="ccProvider" value="gemini" />
-        <span class="cc-model-name">Detail-Scan (~8–10 s)</span>
-        <span class="cc-model-sub">Gemini 3 Flash (Soßen & Extras)</span>
+      <label class="carb-model-card" data-provider="gemini">
+        <input type="radio" name="carbProvider" value="gemini" />
+        <span class="carb-model-name">Detail-Scan (~8–10 s)</span>
+        <span class="carb-model-sub">Gemini 3 Flash (Soßen & Extras)</span>
       </label>
-      <label class="cc-model-card" data-provider="custom">
-        <input type="radio" name="ccProvider" value="custom" />
-        <span class="cc-model-name">Benutzerdefiniert</span>
-        <span class="cc-model-sub" id="ccCustomSubLabel">Eigene API-URL & Key</span>
+      <label class="carb-model-card" data-provider="custom">
+        <input type="radio" name="carbProvider" value="custom" />
+        <span class="carb-model-name">Benutzerdefiniert</span>
+        <span class="carb-model-sub" id="carbCustomSubLabel">Eigene API-URL & Key</span>
       </label>
     </div>
 
-    <div class="cc-upload-section">
-      <div class="cc-upload-actions">
-        <button type="button" id="ccCameraBtn" class="cc-btn cc-btn-dark">Foto aufnehmen</button>
-        <button type="button" id="ccGalleryBtn" class="cc-btn cc-btn-light">Aus Mediathek / Datei</button>
+    <div class="carb-upload-section">
+      <div class="carb-upload-actions">
+        <button type="button" id="carbCameraBtn" class="carb-btn carb-btn-dark">Foto aufnehmen</button>
+        <button type="button" id="carbGalleryBtn" class="carb-btn carb-btn-light">Aus Mediathek / Datei</button>
       </div>
-      <p class="cc-hint-text">Bis zu 3 Perspektiven möglich (z. B. Draufsicht + 45°-Winkel).</p>
-      <input type="file" id="ccCameraInput" accept="image/*" capture="environment" hidden />
-      <input type="file" id="ccGalleryInput" accept="image/*" multiple hidden />
-      <div id="ccPreviewGrid" class="cc-preview-grid"></div>
+      <p class="carb-hint-text">Bis zu 3 Perspektiven möglich (z. B. Draufsicht + 45°-Winkel).</p>
+      <input type="file" id="carbCameraInput" accept="image/*" capture="environment" hidden />
+      <input type="file" id="carbGalleryInput" accept="image/*" multiple hidden />
+      <div id="carbPreviewGrid" class="carb-preview-grid"></div>
     </div>
 
-    <div class="cc-tip-section">
-      <label for="ccUserTip" class="cc-label">Optionaler Hinweis / Tipp für die KI</label>
+    <div class="carb-tip-section">
+      <label for="carbUserTip" class="carb-label">Optionaler Hinweis / Tipp für die KI</label>
       <input
         type="text"
-        id="ccUserTip"
-        class="cc-input"
+        id="carbUserTip"
+        class="carb-input"
         placeholder="z. B. Dünner Teig, Soße mit Stärke gebunden, Cola Zero..."
       />
     </div>
 
-    <div id="ccStatusBox" class="cc-status" hidden></div>
+    <div id="carbStatusBox" class="carb-status" hidden></div>
 
-    <div id="ccResultSection" class="cc-result-section" hidden>
-      <div class="cc-result-header">
-        <span class="cc-total-label">Gesamt: <strong id="ccTotalCarbs">0</strong> g Kohlenhydrate</span>
-        <div class="cc-result-actions">
-          <button type="button" id="ccEditToggleBtn" class="cc-btn-small" aria-pressed="false" aria-controls="ccItemsList">Werte korrigieren</button>
-          <button type="button" id="ccAddRowBtn" class="cc-btn-small" hidden>+ Zutat</button>
+    <div id="carbResultSection" class="carb-result-section" hidden>
+      <div class="carb-result-header">
+        <span class="carb-total-label">Gesamt: <strong id="carbTotalCarbs">0</strong> g Kohlenhydrate</span>
+        <div class="carb-result-actions">
+          <button type="button" id="carbEditToggleBtn" class="carb-btn-small" aria-pressed="false" aria-controls="carbItemsList">Werte korrigieren</button>
+          <button type="button" id="carbAddRowBtn" class="carb-btn-small" hidden>+ Zutat</button>
         </div>
       </div>
-      <div id="ccItemsList" class="cc-items-list"></div>
-      <p id="ccAnalysisNote" class="cc-note"></p>
-      <p id="ccTimingInfo" class="cc-timing"></p>
+      <div id="carbItemsList" class="carb-items-list"></div>
+      <p id="carbAnalysisNote" class="carb-note"></p>
+      <p id="carbTimingInfo" class="carb-timing"></p>
     </div>
 
-    <div class="cc-footer">
-      <button type="button" id="ccCancelBtn" class="cc-btn cc-btn-light">Abbrechen</button>
-      <button type="button" id="ccAnalyzeBtn" class="cc-btn cc-btn-primary">Analysieren</button>
-      <button type="button" id="ccApplyBtn" class="cc-btn cc-btn-success" hidden>Werte übernehmen</button>
+    <div class="carb-footer">
+      <button type="button" id="carbCancelBtn" class="carb-btn carb-btn-light">Abbrechen</button>
+      <button type="button" id="carbAnalyzeBtn" class="carb-btn carb-btn-primary">Analysieren</button>
+      <button type="button" id="carbApplyBtn" class="carb-btn carb-btn-success" hidden>Werte übernehmen</button>
     </div>
 
-    <p class="cc-disclaimer">
+    <p class="carb-disclaimer">
       Ausschließlich zu Informationszwecken. Für medizinischen Rat oder eine Diagnose wende dich bitte an eine Fachkraft. Antworten von KI-Systemen können Fehler enthalten.
     </p>
   </div>

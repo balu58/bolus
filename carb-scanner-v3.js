@@ -4,7 +4,7 @@
   const currentScriptEl = document.currentScript;
   const defaultDialogUrl =
     (currentScriptEl && currentScriptEl.getAttribute("data-dialog-url")) ||
-    "carbcam-dialog-v3.html";
+    "carb-dialog-v3.html";
 
   const SYSTEM_PROMPT = [
     "Du bist ein präziser Ernährungs- und Diabetes-Assistent. Analysiere die Mahlzeit auf den übergebenen Fotos (1 bis 3 Perspektiven derselben Mahlzeit) und berechne die verwertbaren Kohlenhydrate in Gramm.",
@@ -34,9 +34,9 @@
     "}"
   ].join("\n");
 
-  const CarbCamScanner = {
+  const CarbScanner = {
     config: {
-      triggerSelector: "#openCarbsScannerBtn",
+      triggerSelector: "#openCarbScannerBtn",
       targetInputSelector: "#mainCarbsInput",
       dialogUrl: defaultDialogUrl,
       groqKeyStorageName: "carbs_groq_api_key",
@@ -66,7 +66,7 @@
         await this.injectDialogHtml();
         this.bindDialogEvents();
       } catch (err) {
-        console.error("[CarbCamScanner] Fehler beim Laden des Dialogs:", err);
+        console.error("[CarbScanner] Fehler beim Laden des Dialogs:", err);
       }
     },
 
@@ -84,7 +84,7 @@
             await this.injectDialogHtml();
           }
           this.bindDialogEvents();
-          const modal = document.getElementById("carbcamModal");
+          const modal = document.getElementById("carbModal");
           if (modal) {
             this.resetDialog();
             this.updateCustomCardLabel();
@@ -92,7 +92,7 @@
           }
         } catch (err) {
           alert(
-            "Der CarbCam-Dialog konnte nicht geladen werden.\n\n" +
+            "Der Carb-Dialog konnte nicht geladen werden.\n\n" +
             "Hinweis: Bitte die Seite über einen lokalen Server (z. B. http://localhost) oder GitHub Pages öffnen, nicht direkt per file://.\n\n" +
             "Details: " + err.message
           );
@@ -101,7 +101,7 @@
     },
 
     async injectDialogHtml() {
-      if (this.state.dialogInjected || document.getElementById("carbcamModal")) {
+      if (this.state.dialogInjected || document.getElementById("carbModal")) {
         this.state.dialogInjected = true;
         return;
       }
@@ -119,7 +119,7 @@
     },
 
     updateCustomCardLabel() {
-      const sub = document.getElementById("ccCustomSubLabel");
+      const sub = document.getElementById("carbCustomSubLabel");
       if (!sub) return;
       const url = this.getStoredKey(this.config.customUrlStorageName);
       const model = this.getStoredKey(this.config.customModelStorageName);
@@ -137,16 +137,16 @@
 
     bindDialogEvents() {
       if (this.state.eventsBound) return;
-      const modal = document.getElementById("carbcamModal");
+      const modal = document.getElementById("carbModal");
       if (!modal) return;
       this.state.eventsBound = true;
 
-      document.getElementById("ccCloseTopBtn").addEventListener("click", () => modal.close());
-      document.getElementById("ccCancelBtn").addEventListener("click", () => modal.close());
+      document.getElementById("carbCloseTopBtn").addEventListener("click", () => modal.close());
+      document.getElementById("carbCancelBtn").addEventListener("click", () => modal.close());
 
-      modal.querySelectorAll(".cc-model-card").forEach((card) => {
+      modal.querySelectorAll(".carb-model-card").forEach((card) => {
         card.addEventListener("click", () => {
-          modal.querySelectorAll(".cc-model-card").forEach((c) => c.classList.remove("active"));
+          modal.querySelectorAll(".carb-model-card").forEach((c) => c.classList.remove("active"));
           card.classList.add("active");
           const radio = card.querySelector("input[type='radio']");
           if (radio) {
@@ -156,10 +156,10 @@
         });
       });
 
-      const cameraInput = document.getElementById("ccCameraInput");
-      const galleryInput = document.getElementById("ccGalleryInput");
+      const cameraInput = document.getElementById("carbCameraInput");
+      const galleryInput = document.getElementById("carbGalleryInput");
 
-      document.getElementById("ccCameraBtn").addEventListener("click", () => {
+      document.getElementById("carbCameraBtn").addEventListener("click", () => {
         if (this.state.images.length >= 3) {
           this.showStatus("Maximal 3 Bilder pro Analyse möglich.", true);
           return;
@@ -168,7 +168,7 @@
         cameraInput.click();
       });
 
-      document.getElementById("ccGalleryBtn").addEventListener("click", () => {
+      document.getElementById("carbGalleryBtn").addEventListener("click", () => {
         if (this.state.images.length >= 3) {
           this.showStatus("Maximal 3 Bilder pro Analyse möglich.", true);
           return;
@@ -180,11 +180,11 @@
       cameraInput.addEventListener("change", (e) => this.handleFiles(e.target.files));
       galleryInput.addEventListener("change", (e) => this.handleFiles(e.target.files));
 
-      document.getElementById("ccAnalyzeBtn").addEventListener("click", () => this.runAnalysis());
-      document.getElementById("ccEditToggleBtn").addEventListener("click", () => {
+      document.getElementById("carbAnalyzeBtn").addEventListener("click", () => this.runAnalysis());
+      document.getElementById("carbEditToggleBtn").addEventListener("click", () => {
         this.setItemsEditing(!this.state.editingItems);
       });
-      document.getElementById("ccAddRowBtn").addEventListener("click", () => {
+      document.getElementById("carbAddRowBtn").addEventListener("click", () => {
         this.state.items.push({
           name: "Weitere Zutat",
           gewicht_gramm: 100,
@@ -196,7 +196,7 @@
         this.renderItems();
       });
 
-      document.getElementById("ccApplyBtn").addEventListener("click", () => {
+      document.getElementById("carbApplyBtn").addEventListener("click", () => {
         const totalCarbs = this.calculateTotalCarbs();
         if (this.config.targetInputSelector) {
           const targetEl = document.querySelector(this.config.targetInputSelector);
@@ -222,11 +222,11 @@
       this.state.items = [];
       this.renderPreviews();
       this.setItemsEditing(false);
-      document.getElementById("ccUserTip").value = "";
-      document.getElementById("ccStatusBox").hidden = true;
-      document.getElementById("ccResultSection").hidden = true;
-      document.getElementById("ccApplyBtn").hidden = true;
-      document.getElementById("ccAnalyzeBtn").disabled = false;
+      document.getElementById("carbUserTip").value = "";
+      document.getElementById("carbStatusBox").hidden = true;
+      document.getElementById("carbResultSection").hidden = true;
+      document.getElementById("carbApplyBtn").hidden = true;
+      document.getElementById("carbAnalyzeBtn").disabled = false;
     },
 
     async handleFiles(fileList) {
@@ -242,7 +242,7 @@
       if (fileList.length > remaining) {
         this.showStatus("Es wurden nur die ersten 3 Bilder übernommen.", true);
       } else {
-        document.getElementById("ccStatusBox").hidden = true;
+        document.getElementById("carbStatusBox").hidden = true;
       }
 
       this.renderPreviews();
@@ -292,16 +292,16 @@
     },
 
     renderPreviews() {
-      const grid = document.getElementById("ccPreviewGrid");
+      const grid = document.getElementById("carbPreviewGrid");
       grid.innerHTML = "";
       this.state.images.forEach((img, idx) => {
         const wrap = document.createElement("div");
-        wrap.className = "cc-thumb-wrap";
+        wrap.className = "carb-thumb-wrap";
         wrap.innerHTML =
           '<img src="' + img.dataUrl + '" alt="Perspektive ' + (idx + 1) + '" />' +
-          '<span class="cc-thumb-badge">Bild ' + (idx + 1) + " (" + img.sizeKB + " KB)</span>" +
-          '<button type="button" class="cc-thumb-remove" aria-label="Entfernen">&times;</button>';
-        wrap.querySelector(".cc-thumb-remove").addEventListener("click", () => {
+          '<span class="carb-thumb-badge">Bild ' + (idx + 1) + " (" + img.sizeKB + " KB)</span>" +
+          '<button type="button" class="carb-thumb-remove" aria-label="Entfernen">&times;</button>';
+        wrap.querySelector(".carb-thumb-remove").addEventListener("click", () => {
           this.state.images.splice(idx, 1);
           this.renderPreviews();
         });
@@ -316,7 +316,7 @@
 
     startTimer(label) {
       this.state.startTime = performance.now();
-      const statusBox = document.getElementById("ccStatusBox");
+      const statusBox = document.getElementById("carbStatusBox");
       statusBox.classList.remove("error");
       statusBox.hidden = false;
       statusBox.textContent = label + " läuft... 0.0 s";
@@ -347,7 +347,7 @@
 
     showStatus(msg, isError = false, details = "") {
       clearInterval(this.state.timerInterval);
-      const statusBox = document.getElementById("ccStatusBox");
+      const statusBox = document.getElementById("carbStatusBox");
       statusBox.hidden = false;
       statusBox.classList.toggle("error", isError);
       statusBox.innerHTML = "";
@@ -386,7 +386,7 @@
     },
 
     buildUserPrompt() {
-      const tip = document.getElementById("ccUserTip").value.trim();
+      const tip = document.getElementById("carbUserTip").value.trim();
       const count = this.state.images.length;
       let text =
         "Analysiere diese " +
@@ -404,10 +404,10 @@
         return;
       }
 
-      const analyzeBtn = document.getElementById("ccAnalyzeBtn");
+      const analyzeBtn = document.getElementById("carbAnalyzeBtn");
       analyzeBtn.disabled = true;
-      document.getElementById("ccResultSection").hidden = true;
-      document.getElementById("ccApplyBtn").hidden = true;
+      document.getElementById("carbResultSection").hidden = true;
+      document.getElementById("carbApplyBtn").hidden = true;
 
       const selected = this.state.provider;
       let usedModelLabel = "";
@@ -593,7 +593,7 @@
       }
       if (customUrl.toLowerCase().includes("openrouter.ai")) {
         headers["HTTP-Referer"] = "https://localhost";
-        headers["X-Title"] = "CarbCam Web-App";
+        headers["X-Title"] = "Carb Web-App";
       }
 
       const contentParts = [{ type: "text", text: this.buildUserPrompt() }];
@@ -638,7 +638,7 @@
 
     displayResult(parsed, modelLabel) {
       const duration = this.stopTimer();
-      document.getElementById("ccStatusBox").hidden = true;
+      document.getElementById("carbStatusBox").hidden = true;
 
       const list = Array.isArray(parsed.zutaten) ? parsed.zutaten : [];
       this.state.items = list.map((z) => {
@@ -657,22 +657,22 @@
 
       this.setItemsEditing(false);
 
-      document.getElementById("ccAnalysisNote").textContent = parsed.hinweis || "";
+      document.getElementById("carbAnalysisNote").textContent = parsed.hinweis || "";
       const totalKB = this.state.images.reduce((acc, i) => acc + i.sizeKB, 0);
-      document.getElementById("ccTimingInfo").textContent =
+      document.getElementById("carbTimingInfo").textContent =
         "Modell: " + modelLabel + " • Dauer: " + duration + " s • " + this.state.images.length + " Bild(er) (" + totalKB + " KB)";
 
-      document.getElementById("ccResultSection").hidden = false;
-      document.getElementById("ccApplyBtn").hidden = false;
+      document.getElementById("carbResultSection").hidden = false;
+      document.getElementById("carbApplyBtn").hidden = false;
     },
 
     renderItems() {
-      const container = document.getElementById("ccItemsList");
+      const container = document.getElementById("carbItemsList");
       container.innerHTML = "";
 
       this.state.items.forEach((item, index) => {
         const row = document.createElement("div");
-        row.className = "cc-item-row";
+        row.className = "carb-item-row";
 
         const dryText =
           item.trockengewicht_gramm != null && item.trockengewicht_gramm > 0
@@ -680,24 +680,24 @@
             : "";
 
         if (!this.state.editingItems) {
-          row.classList.add("cc-item-readonly");
+          row.classList.add("carb-item-readonly");
           const name = document.createElement("span");
-          name.className = "cc-item-label cc-item-name";
+          name.className = "carb-item-label carb-item-name";
           name.textContent = item.name;
 
           const weightCell = document.createElement("div");
-          weightCell.className = "cc-weight-cell";
+          weightCell.className = "carb-weight-cell";
           const weight = document.createElement("span");
-          weight.className = "cc-item-label cc-item-value";
+          weight.className = "carb-item-label carb-item-value";
           weight.textContent = Math.round(item.gewicht_gramm) + " g";
           const dryTag = document.createElement("span");
-          dryTag.className = "cc-dry-tag";
+          dryTag.className = "carb-dry-tag";
           dryTag.textContent = dryText;
           weightCell.appendChild(weight);
           weightCell.appendChild(dryTag);
 
           const carbs = document.createElement("span");
-          carbs.className = "cc-item-label cc-item-value";
+          carbs.className = "carb-item-label carb-item-value";
           carbs.textContent = Math.round(item.kohlenhydrate_gramm) + " g";
 
           row.appendChild(name);
@@ -708,37 +708,37 @@
         }
 
         row.innerHTML =
-          '<input type="text" class="cc-in-name" value="' + this.escapeHtml(item.name) + '" aria-label="Zutat" />' +
-          '<div class="cc-weight-cell">' +
-          '<input type="number" class="cc-in-weight" value="' + Math.round(item.gewicht_gramm) + '" min="0" step="1" aria-label="Gewicht in g" />' +
-          '<span class="cc-dry-tag">' + dryText + "</span>" +
+          '<input type="text" class="carb-in-name" value="' + this.escapeHtml(item.name) + '" aria-label="Zutat" />' +
+          '<div class="carb-weight-cell">' +
+          '<input type="number" class="carb-in-weight" value="' + Math.round(item.gewicht_gramm) + '" min="0" step="1" aria-label="Gewicht in g" />' +
+          '<span class="carb-dry-tag">' + dryText + "</span>" +
           "</div>" +
-          '<div class="cc-carbs-cell">' +
-          '<input type="number" class="cc-in-carbs" value="' + Math.round(item.kohlenhydrate_gramm) + '" min="0" step="1" aria-label="Kohlenhydrate in g" />' +
+          '<div class="carb-carbs-cell">' +
+          '<input type="number" class="carb-in-carbs" value="' + Math.round(item.kohlenhydrate_gramm) + '" min="0" step="1" aria-label="Kohlenhydrate in g" />' +
           '<span style="font-size:0.75rem;">g</span>' +
           "</div>" +
-          '<button type="button" class="cc-del-row" title="Zeile löschen">&times;</button>';
+          '<button type="button" class="carb-del-row" title="Zeile löschen">&times;</button>';
 
-        row.querySelector(".cc-in-name").addEventListener("input", (e) => {
+        row.querySelector(".carb-in-name").addEventListener("input", (e) => {
           item.name = e.target.value;
         });
 
-        row.querySelector(".cc-in-weight").addEventListener("input", (e) => {
+        row.querySelector(".carb-in-weight").addEventListener("input", (e) => {
           const newWeight = Math.max(0, Number(e.target.value) || 0);
           item.gewicht_gramm = newWeight;
           if (item.carbsPerGram > 0) {
             item.kohlenhydrate_gramm = Math.round(newWeight * item.carbsPerGram);
-            row.querySelector(".cc-in-carbs").value = item.kohlenhydrate_gramm;
+            row.querySelector(".carb-in-carbs").value = item.kohlenhydrate_gramm;
           }
           if (item.dryRatio != null) {
             item.trockengewicht_gramm = Math.round(newWeight * item.dryRatio);
-            row.querySelector(".cc-dry-tag").textContent =
+            row.querySelector(".carb-dry-tag").textContent =
               item.trockengewicht_gramm > 0 ? "(tr: " + item.trockengewicht_gramm + "g)" : "";
           }
           this.updateTotalDisplay();
         });
 
-        row.querySelector(".cc-in-carbs").addEventListener("input", (e) => {
+        row.querySelector(".carb-in-carbs").addEventListener("input", (e) => {
           const newCarbs = Math.max(0, Number(e.target.value) || 0);
           item.kohlenhydrate_gramm = newCarbs;
           if (item.gewicht_gramm > 0) {
@@ -747,7 +747,7 @@
           this.updateTotalDisplay();
         });
 
-        row.querySelector(".cc-del-row").addEventListener("click", () => {
+        row.querySelector(".carb-del-row").addEventListener("click", () => {
           this.state.items.splice(index, 1);
           this.renderItems();
         });
@@ -760,10 +760,10 @@
 
     setItemsEditing(editing) {
       this.state.editingItems = editing;
-      const toggle = document.getElementById("ccEditToggleBtn");
+      const toggle = document.getElementById("carbEditToggleBtn");
       toggle.textContent = editing ? "Fertig" : "Werte korrigieren";
       toggle.setAttribute("aria-pressed", String(editing));
-      document.getElementById("ccAddRowBtn").hidden = !editing;
+      document.getElementById("carbAddRowBtn").hidden = !editing;
       this.renderItems();
     },
 
@@ -774,7 +774,7 @@
     },
 
     updateTotalDisplay() {
-      document.getElementById("ccTotalCarbs").textContent = this.calculateTotalCarbs();
+      document.getElementById("carbTotalCarbs").textContent = this.calculateTotalCarbs();
     },
 
     escapeHtml(str) {
@@ -786,63 +786,6 @@
     }
   };
 
-  global.CarbCamScanner = CarbCamScanner;
-  global.CarbsScanner = CarbCamScanner;
+  global.CarbScanner = CarbScanner;
 })(window);
-
-// prepare App
-
-    // 1. Gespeicherte Keys (alte Namen!) in die Konfigurationsfelder laden
-    const KEY_MAP = {
-      cfgGroqKey: "carbs_groq_api_key",
-      cfgGeminiKey: "carbs_gemini_api_key",
-      cfgCustomUrl: "carbs_custom_api_url",
-      cfgCustomKey: "carbs_custom_api_key",
-      cfgCustomModel: "carbs_custom_api_model"
-    };
-
-    Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
-      const el = document.getElementById(inputId);
-      if (el) el.value = localStorage.getItem(storageKey) || "";
-    });
-
-    // 2. Auge-Button (Passwort sichtbar / unsichtbar schalten)
-    document.querySelectorAll(".eye-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const input = document.getElementById(btn.getAttribute("data-target"));
-        if (!input) return;
-        const isHidden = input.type === "password";
-        input.type = isHidden ? "text" : "password";
-        btn.textContent = isHidden ? "🙈" : "👁️";
-      });
-    });
-
-    // 3. Keys im localStorage speichern
-    document.getElementById("saveKeysBtn").addEventListener("click", () => {
-      Object.entries(KEY_MAP).forEach(([inputId, storageKey]) => {
-        const val = document.getElementById(inputId).value.trim();
-        if (val) {
-          localStorage.setItem(storageKey, val);
-        } else {
-          localStorage.removeItem(storageKey);
-        }
-      });
-      const fb = document.getElementById("saveFeedback");
-      fb.hidden = false;
-      setTimeout(() => (fb.hidden = true), 2500);
-    });
-
-    // 4. Scanner initialisieren (funktioniert sowohl mit CarbsScanner als auch CarbCamScanner)
-    CarbsScanner.init({
-      triggerSelector: "#openCarbsScannerBtn",
-      targetInputSelector: "#mainCarbsInput",
-      groqKeyStorageName: "carbs_groq_api_key",
-      geminiKeyStorageName: "carbs_gemini_api_key",
-      customUrlStorageName: "carbs_custom_api_url",
-      customKeyStorageName: "carbs_custom_api_key",
-      customModelStorageName: "carbs_custom_api_model",
-      onApply: (result) => {
-        console.log("Übernommene Kohlenhydrate:", result.totalCarbs, result.items);
-      }
-    });
 

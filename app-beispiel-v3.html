@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carb KI Web-App Integration (v3)</title>
+  <title>Carb Scanner KI Web-App Integration (v3)</title>
   <link rel="stylesheet" href="bolus-theme.css">
   <style>
     body {
@@ -114,6 +114,22 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .import-status {
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    .import-status.success { color: var(--ok); }
+    .import-status.error { color: var(--red); }
+    .import-password {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+      background: var(--bg);
+      color: var(--ink);
+    }
   </style>
 </head>
 <body>
@@ -124,7 +140,7 @@
       <div class="form-row">
         <label for="mainCarbsInput"><strong>Kohlenhydrate (g):</strong></label>
         <input type="number" id="mainCarbsInput" class="main-input" placeholder="z. B. 50" />
-        <button type="button" id="openCarbsScannerBtn" class="btn btn-primary">
+        <button type="button" id="openCarbScannerBtn" class="btn btn-primary">
           📷 Foto-Scanner öffnen
         </button>
       </div>
@@ -178,17 +194,119 @@
       </div>
     </section>
     <section class="card">
+      <h2>Lokale API-Konfiguration importieren</h2>
+      <p>Importiere eine Browser-Speicher-Sicherung aus der Bolus-App. Eine normale Bolus-Datensicherung enthält keine API-Konfiguration. Andere lokale Daten werden nicht verändert.</p>
+      <input type="file" id="storageImportFile" accept=".json,.bolusenc,application/json,text/plain" />
+      <label for="storageImportPassword" style="display:block;margin-top:10px">Passwort für verschlüsselte Sicherungen</label>
+      <input type="password" id="storageImportPassword" class="import-password" autocomplete="current-password" />
+      <p id="storageImportStatus" class="import-status"></p>
+      <a class="btn btn-primary" href="index.html" style="display:inline-block;margin-top:10px;text-decoration:none">Zur Bolus-App</a>
+    </section>
+    <section class="card">
       <h2>Hinweise</h2>
       <ul>
         <li>Die API-Keys werden nur lokal im Browser gespeichert (localStorage).</li>
         <li>Die Keys werden nicht an einen Server gesendet.</li>
-        <li>Die Keys sind notwendig, um die CarbCam-Scanner-Funktionalität zu nutzen.</li>
+        <li>Die Keys sind notwendig, um die Carb-Scanner-Funktionalität zu nutzen.</li>
         <li>Der Scanner kann Groq, Google Gemini sowie einen frei konfigurierbaren Anbieter (Benutzerdefiniert) verwenden.</li>
       </ul>
     </section>
   </div>
 
-  <!-- Ausgelagerter CarbCam-Scanner mit automatischer Pfaderkennung für das Dialog-HTML -->
-  <script src="carbcam-scanner-v3.js" data-dialog-url="carbcam-dialog-v3.html"></script>
+  <script src="storage.js"></script>
+  <script src="carb-scanner-v3.js" data-dialog-url="carb-dialog-v3.html"></script>
+  <script>
+    const apiConfig = BolusStorage.loadApiConfig();
+    Object.entries(apiConfig).forEach(([inputId, value]) => {
+      const el = document.getElementById(inputId);
+      if (el) el.value = value;
+    });
+
+    document.querySelectorAll(".eye-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.getAttribute("data-target"));
+        if (!input) return;
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "🙈" : "👁";
+      });
+    });
+
+    document.getElementById("saveKeysBtn").addEventListener("click", () => {
+      const values = {};
+      Object.keys(BolusStorage.fieldKeys).forEach((inputId) => {
+        values[inputId] = document.getElementById(inputId).value;
+      });
+      BolusStorage.saveApiConfig(values);
+      const fb = document.getElementById("saveFeedback");
+      fb.hidden = false;
+      setTimeout(() => (fb.hidden = true), 2500);
+    });
+
+    document.getElementById("storageImportFile").addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      const status = document.getElementById("storageImportStatus");
+      if (!file) return;
+
+      status.className = "import-status";
+      status.textContent = "Datei wird gelesen...";
+
+      const reader = new FileReader();
+      reader.onerror = () => {
+        status.className = "import-status error";
+        status.textContent = "Die Sicherungsdatei konnte nicht gelesen werden.";
+        event.target.value = "";
+      };
+      reader.onload = async () => {
+        try {
+          const password = document.getElementById("storageImportPassword").value;
+          const payload = await BolusStorage.readLocalBackup(String(reader.result), password);
+          if (payload.app !== "bolusrechner" || payload.kind !== "localStorage" || !Array.isArray(payload.entries)) {
+            throw new Error("Ungültige Sicherung");
+          }
+
+          const imported = BolusStorage.importEntries(payload.entries, true);
+          if (imported === 0) {
+            status.className = "import-status error";
+            status.textContent = "Diese Sicherung enthält keine Carb-API-Konfiguration.";
+            return;
+          }
+
+          const updated = BolusStorage.loadApiConfig();
+          Object.entries(updated).forEach(([inputId, value]) => {
+            const el = document.getElementById(inputId);
+            if (el) el.value = value;
+          });
+
+          status.className = "import-status success";
+          status.textContent = imported + " Carb-API-Einstellung(en) wurden übernommen.";
+        } catch (error) {
+          status.className = "import-status error";
+          if (error.message === "password") {
+            status.textContent = "Passwort fehlt oder ist falsch.";
+          } else if (error.message === "unsupported") {
+            status.textContent = "Entschlüsseln wird von diesem Browser nicht unterstützt.";
+          } else if (error.message === "no-api-config") {
+            status.textContent = "Das ist eine normale Bolus-Datensicherung. Wähle stattdessen eine Browser-Speicher-Sicherung.";
+          } else {
+            status.textContent = "Keine gültige Bolus-Sicherung.";
+          }
+        } finally {
+          event.target.value = "";
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    CarbScanner.init({
+      triggerSelector: "#openCarbScannerBtn",
+      targetInputSelector: "#mainCarbsInput",
+      groqKeyStorageName: "carbs_groq_api_key",
+      geminiKeyStorageName: "carbs_gemini_api_key",
+      customUrlStorageName: "carbs_custom_api_url",
+      customKeyStorageName: "carbs_custom_api_key",
+      customModelStorageName: "carbs_custom_api_model"
+    });
+  </script>
 </body>
 </html>
