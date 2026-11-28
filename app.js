@@ -2,7 +2,7 @@
 "use strict";
 // ===== Versionsnummer: bei jeder neuen Version NUR HIER ändern =====
 // Schema: neue Funktionen = ganze Zahl (z. B. "11"), Fehlerkorrekturen = Unterversion (z. B. "11.1")
-var APP_VERSION = "18.0";
+var APP_VERSION = "18.1";
 // ---------- Defaults ----------
 var DEFAULT_SETTINGS = {
   slots:[
